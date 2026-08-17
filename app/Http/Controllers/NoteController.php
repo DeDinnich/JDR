@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Http\Controllers\Player;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\Player\NoteRequest;
 use App\Models\Note;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +9,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+/**
+ * Journal personnel, partagé par les joueurs et le maître du jeu.
+ *
+ * Les notes appartiennent à un compte, pas à un rôle : le même contrôleur sert
+ * donc les deux espaces. `$routePrefix` indique simplement à la vue vers quel
+ * groupe de routes poster — le reste est identique.
+ */
 class NoteController extends Controller
 {
     public function index(Request $request): View
@@ -17,7 +23,10 @@ class NoteController extends Controller
         // Les personnages rencontrés ont leur propre page : le glossaire.
         $notes = $request->user()->notes()->orderByDesc('pinned')->latest('updated_at')->get();
 
-        return view('player.notes.index', compact('notes'));
+        return view('notes.index', [
+            'notes' => $notes,
+            'routePrefix' => $request->user()->isGameMaster() ? 'gm.notes' : 'player.notes',
+        ]);
     }
 
     public function store(NoteRequest $request): RedirectResponse|JsonResponse

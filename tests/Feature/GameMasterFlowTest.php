@@ -54,3 +54,38 @@ test('a npc can be revealed to the whole table', function () {
 
     expect($npc->discoveredBy()->count())->toBe(2);
 });
+
+it('donne au MJ son propre journal, isolé de celui des joueurs', function () {
+    $this->actingAs($this->gameMaster)->post(route('gm.notes.store'), [
+        'title' => 'Préparer l’embuscade',
+        'content' => 'Trois gardes sur le pont nord.',
+    ])->assertSessionHasNoErrors();
+
+    $note = $this->gameMaster->notes()->firstOrFail();
+
+    expect($note->title)->toBe('Préparer l’embuscade');
+
+    $this->actingAs($this->gameMaster)->get(route('gm.notes.index'))
+        ->assertOk()
+        ->assertSee('Préparer l’embuscade');
+
+    // Le joueur ne voit pas les notes du MJ, et n'atteint pas sa route.
+    $this->actingAs($this->recipient)->get(route('player.notes.index'))
+        ->assertOk()
+        ->assertDontSee('Préparer l’embuscade');
+
+    $this->actingAs($this->recipient)->get(route('gm.notes.index'))->assertForbidden();
+});
+
+it('empêche le MJ de modifier la note d’un joueur', function () {
+    $note = $this->recipient->notes()->create([
+        'title' => 'Ma note',
+        'content' => 'Privé.',
+    ]);
+
+    $this->actingAs($this->gameMaster)
+        ->put(route('gm.notes.update', $note), ['title' => 'Volée', 'content' => 'x'])
+        ->assertForbidden();
+
+    expect($note->fresh()->title)->toBe('Ma note');
+});

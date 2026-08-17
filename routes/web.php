@@ -12,12 +12,12 @@ use App\Http\Controllers\Gm\SecretMessageController as GmSecretMessageController
 use App\Http\Controllers\Gm\WorldController as GmWorldController;
 use App\Http\Controllers\MapPointController;
 use App\Http\Controllers\MapTileController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\Player\CharacterController as PlayerCharacterController;
 use App\Http\Controllers\Player\CharacterCreationController;
 use App\Http\Controllers\Player\GlossaryController;
 use App\Http\Controllers\Player\IdentityController;
 use App\Http\Controllers\Player\InventoryController as PlayerInventoryController;
-use App\Http\Controllers\Player\NoteController;
 use App\Http\Controllers\Player\NpcController;
 use App\Http\Controllers\Player\WorldController as PlayerWorldController;
 use App\Http\Controllers\SecretMessageController;
@@ -123,6 +123,12 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::post('/messages', [GmSecretMessageController::class, 'store'])->name('messages.store');
+
+        // Journal du MJ : même écran que celui des joueurs, notes privées.
+        Route::get('/journal', [NoteController::class, 'index'])->name('notes.index');
+        Route::post('/journal', [NoteController::class, 'store'])->name('notes.store');
+        Route::put('/journal/{note}', [NoteController::class, 'update'])->name('notes.update');
+        Route::delete('/journal/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
 
         // ── Base de PNJ ───────────────────────────────────────────────────
         // Import/export placés avant la route paramétrée pour que « importer »

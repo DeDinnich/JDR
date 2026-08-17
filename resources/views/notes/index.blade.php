@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 {{--
-    Journal du joueur.
+    Journal personnel — même écran pour le joueur et le maître du jeu.
 
     Une note = un éditeur de texte riche qui s'enregistre seul en arrière-plan
-    dès que le joueur cesse d'écrire. Les personnages rencontrés ont leur propre
-    page (le glossaire) et ne figurent plus ici.
+    dès que l'on cesse d'écrire. Les notes appartiennent au compte : personne
+    ne voit celles d'un autre, MJ compris.
 --}}
 
 @section('title', 'Journal')
@@ -17,7 +17,7 @@
 </div>
 
 <div class="actions" style="margin-bottom:1rem">
-    <form method="POST" action="{{ route('player.notes.store') }}">
+    <form method="POST" action="{{ route($routePrefix.'.store') }}">
         @csrf
         <input type="hidden" name="title" value="Nouvelle note">
         <button class="btn btn-primary" type="submit">＋ Nouvelle note</button>
@@ -26,13 +26,13 @@
 
 <div class="stack">
     @forelse($notes as $note)
-        <section class="card note-editor" data-note-url="{{ route('player.notes.update', $note) }}">
+        <section class="card note-editor" data-note-url="{{ route($routePrefix.'.update', $note) }}">
             <header class="card-header">
                 <input class="input note-title" name="title" value="{{ $note->title }}" maxlength="180"
                        aria-label="Titre de la note">
                 <div class="actions">
                     <span class="badge note-status" aria-live="polite">Enregistrée à {{ $note->updated_at->format('H:i') }}</span>
-                    <form method="POST" action="{{ route('player.notes.destroy', $note) }}"
+                    <form method="POST" action="{{ route($routePrefix.'.destroy', $note) }}"
                           onsubmit="return confirm('Supprimer cette note ?')">
                         @csrf @method('DELETE')
                         <button class="btn btn-ghost btn-sm" type="submit" title="Supprimer">🗑</button>
