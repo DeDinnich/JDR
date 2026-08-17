@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs><radialGradient id="forest"><stop stop-color="#405b46"/><stop offset="1" stop-color="#101a14"/></radialGradient><filter id="mist"><feTurbulence baseFrequency=".02" numOctaves="4"/><feDisplacementMap in="SourceGraphic" scale="40"/></filter></defs>
+  <rect width="1200" height="800" fill="url(#forest)"/>
+  <g fill="#17281b" stroke="#6e836b" stroke-opacity=".18"> 
+    <circle cx="120" cy="140" r="110"/><circle cx="310" cy="80" r="150"/><circle cx="510" cy="170" r="130"/><circle cx="760" cy="90" r="180"/><circle cx="1030" cy="160" r="150"/><circle cx="80" cy="500" r="160"/><circle cx="360" cy="610" r="190"/><circle cx="730" cy="570" r="170"/><circle cx="1060" cy="590" r="210"/>
+  </g>
+  <path d="M-60 380C150 300 280 430 430 360s250-20 370 70 260 50 470-50" fill="none" stroke="#c5c9b2" stroke-opacity=".18" stroke-width="48" filter="url(#mist)"/>
+  <circle cx="660" cy="360" r="108" fill="#7e936f" opacity=".22"/><circle cx="660" cy="360" r="75" fill="none" stroke="#d5cf98" stroke-opacity=".28" stroke-width="3" stroke-dasharray="8 14"/>
+</svg>

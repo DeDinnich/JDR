@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs><linearGradient id="land" x2="1" y2="1"><stop stop-color="#566449"/><stop offset="1" stop-color="#29392d"/></linearGradient><filter id="paper"><feTurbulence baseFrequency=".55" numOctaves="4"/><feColorMatrix values=".14 0 0 0 .1 0 .12 0 0 .08 0 0 .08 0 .04 0 0 0 .25 0"/></filter></defs>
+  <rect width="1200" height="800" fill="url(#land)"/><rect width="1200" height="800" filter="url(#paper)" opacity=".4"/>
+  <path d="M-30 680C180 510 280 720 430 570S680 340 850 480s220-20 390-120" fill="none" stroke="#92a6a1" stroke-width="34" opacity=".48"/>
+  <path d="M-30 680C180 510 280 720 430 570S680 340 850 480s220-20 390-120" fill="none" stroke="#cdd7cc" stroke-width="4" opacity=".35"/>
+  <g fill="#172218" opacity=".9"><path d="M0 0h320l120 170-180 140L0 250z"/><path d="M1200 0H870l-90 160 160 120 260-60z"/></g>
+  <g fill="#1b281d"><path d="m130 320 22-72 22 72z"/><path d="m180 350 25-82 25 82z"/><path d="m920 590 30-95 30 95z"/><path d="m1000 550 24-82 24 82z"/><path d="m710 230 25-90 25 90z"/></g>
+  <g fill="none" stroke="#d8ba72" stroke-opacity=".25" stroke-width="3"><circle cx="290" cy="260" r="75"/><circle cx="290" cy="260" r="62"/><path d="m290 180 24 50 55 7-40 39 10 55-49-26-49 26 10-55-40-39 55-7z"/></g>
+</svg>
