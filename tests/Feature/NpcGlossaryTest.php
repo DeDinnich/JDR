@@ -15,6 +15,7 @@ use App\Enums\UserRole;
 use App\Events\NpcRevealed;
 use App\Models\Npc;
 use App\Models\User;
+use App\Services\Campaign\NpcPresenter;
 use Database\Seeders\CampaignNpcSeeder;
 use Database\Seeders\HouseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -110,9 +111,9 @@ it('garde inaccessible une information non révélée', function () {
     $this->cassian->discoveredBy()->attach($this->alice->id, ['discovered_at' => now()]);
     $information = $this->cassian->informations()->where('title', 'Fonction')->firstOrFail();
 
-    actingAs($this->alice)->get(route('player.glossary.show', $this->cassian))
-        ->assertOk()
-        ->assertDontSee($information->content);
+    $payload = app(NpcPresenter::class)->forPlayer($this->cassian, $this->alice);
+
+    expect(collect($payload['informations'])->pluck('title'))->not->toContain($information->title);
 });
 
 it('rend visible une information une fois révélée, joueur par joueur', function () {
@@ -123,9 +124,14 @@ it('rend visible une information une fois révélée, joueur par joueur', functi
         ['user_ids' => [$this->alice->id]],
     )->assertSessionHasNoErrors();
 
-    actingAs($this->alice)->get(route('player.glossary.show', $this->cassian))
-        ->assertOk()
-        ->assertSee($information->content);
+    // La fiche du glossaire ne liste plus les informations, mais le
+    // présentateur continue de les filtrer joueur par joueur : c'est ce
+    // filtrage qui alimente la modale de révélation.
+    $forAlice = app(NpcPresenter::class)->forPlayer($this->cassian, $this->alice);
+
+    expect(collect($forAlice['informations'])->pluck('title'))->toContain('Fonction');
+
+    actingAs($this->alice)->get(route('player.glossary.show', $this->cassian))->assertOk();
 
     // Bob découvre-t-il quoi que ce soit ? Non.
     actingAs($this->bob)->get(route('player.glossary.show', $this->cassian))

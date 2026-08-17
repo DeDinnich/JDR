@@ -20,26 +20,6 @@
     </div>
 </section>
 
-<section class="card section">
-    <header class="card-header">
-        <div><h2>Ce que tu sais</h2></div>
-        <span class="badge">{{ count($npc['informations']) }}</span>
-    </header>
-    <div class="card-body list">
-        @forelse($npc['informations'] as $information)
-            <div class="list-row">
-                <div>
-                    <strong>{{ $information['title'] }}</strong>
-                    <span class="badge">{{ $information['category_label'] }}</span>
-                    @if($information['content'])<div class="small muted">{{ $information['content'] }}</div>@endif
-                </div>
-            </div>
-        @empty
-            <div class="empty">Tu ne sais encore rien de précis sur cette personne.</div>
-        @endforelse
-    </div>
-</section>
-
 {{-- Même éditeur que le journal : barre d'outils et enregistrement
      automatique dès que le joueur cesse d'écrire. --}}
 <section class="card section note-editor" data-note-url="{{ route('player.glossary.notes', $npc['id']) }}">

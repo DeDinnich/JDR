@@ -14,7 +14,7 @@ class UpdateAttributeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'value' => ['required', 'integer', 'min:0', 'max:99'],
+            'value' => ['required', 'integer', 'min:0', 'max:'.config('jdr.character.attribute_max')],
             'modifier' => ['required', 'integer', 'min:-20', 'max:20'],
         ];
     }

@@ -100,14 +100,46 @@ test('une compétence ne dépasse jamais 100 % ni ne descend sous 0 %', function
     expect($skill['value'])->toBe(0);
 });
 
-test('un enfant de huit ans démarre à 5 % sur ses compétences', function () {
+test('un enfant démarre autour de 25 % grâce au coup de pouce des débuts', function () {
     foreach (['for', 'end', 'dex', 'int', 'cha', 'man'] as $code) {
         ($this->attribute)($code)->update(['value' => 1]);
     }
 
+    // 1 × 5 = 5 %, sous le seuil : + 20 points.
     $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
 
-    expect($skill['value'])->toBe(5);
+    expect($skill['value'])->toBe(25);
+});
+
+test('le coup de pouce ne s’applique plus au-delà du seuil', function () {
+    // 12 et 14 donnent 65 %, largement au-dessus du seuil : rien n'est ajouté.
+    ($this->attribute)('for')->update(['value' => 12]);
+    ($this->attribute)('dex')->update(['value' => 14]);
+
+    $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
+
+    expect($skill['value'])->toBe(65);
+});
+
+test('une caractéristique ne peut pas dépasser le plafond', function () {
+    $attribute = $this->character->attributes()->firstOrFail();
+    $max = config('jdr.character.attribute_max');
+
+    $this->actingAs($this->gameMaster)
+        ->put(route('gm.attributes.update', [$this->character, $attribute]), [
+            'value' => $max + 1,
+            'modifier' => 0,
+        ])
+        ->assertSessionHasErrors('value');
+
+    $this->actingAs($this->gameMaster)
+        ->put(route('gm.attributes.update', [$this->character, $attribute]), [
+            'value' => $max,
+            'modifier' => 0,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($attribute->fresh()->value)->toBe($max);
 });
 
 test('le bonus manuel du MJ modifie la valeur finale de la compétence', function () {
@@ -119,7 +151,8 @@ test('le bonus manuel du MJ modifie la valeur finale de la compétence', functio
 
     $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
 
-    // 65 % de base, plus 2 points de pourcentage accordés par le MJ.
+    // 65 % de base (au-dessus du seuil, donc sans coup de pouce), plus 2
+    // points de pourcentage accordés par le MJ.
     expect($skill['base_value'])->toBe(65)
         ->and($skill['bonus'])->toBe(2)
         ->and($skill['value'])->toBe(67);

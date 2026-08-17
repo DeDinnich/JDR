@@ -56,9 +56,16 @@ class StatFormulaService
             default => $secondary === null ? $primary : ($primary + $secondary) / 2,
         };
 
-        $percentage = $combined * config('jdr.character.formulas.skill_percentage_per_point');
+        $formulas = config('jdr.character.formulas');
+        $percentage = (int) floor($combined * $formulas['skill_percentage_per_point']);
 
-        return $this->clampPercentage((int) floor($percentage));
+        // Coup de pouce des débuts : sous le seuil, on ajoute le bonus. Voir la
+        // note dans config/jdr.php — c'est une addition, pas un plancher.
+        if ($percentage < $formulas['skill_low_threshold']) {
+            $percentage += $formulas['skill_low_bonus'];
+        }
+
+        return $this->clampPercentage($percentage);
     }
 
     private function clampPercentage(int $value): int

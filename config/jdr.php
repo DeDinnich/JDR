@@ -157,7 +157,28 @@ return [
             'skill_percentage_per_point' => 5,
             'skill_percentage_min' => 0,
             'skill_percentage_max' => 100,
+
+            /*
+             * Coup de pouce des débuts.
+             *
+             * En dessous du seuil, la compétence reçoit le bonus : des enfants
+             * partiraient sinon à 5 %, ce qui ne se joue pas. Avec 20/20, ils
+             * démarrent autour de 25–30 %.
+             *
+             * ⚠ La règle n'est pas un plancher : elle ajoute. Une compétence
+             * calculée à 19 ressort donc à 39, tandis qu'une calculée à 20
+             * reste à 20. Sans effet tant que les caractéristiques sont basses,
+             * mais à surveiller quand elles monteront — passer à un plancher
+             * sec revient à remplacer l'addition par un max() dans
+             * StatFormulaService::skillBaseValue().
+             */
+            'skill_low_threshold' => 20,
+            'skill_low_bonus' => 20,
         ],
+
+        // Plafond d'une caractéristique principale. Les compétences, elles,
+        // s'expriment en pourcentage et plafonnent à 100.
+        'attribute_max' => 18,
     ],
 
     /*
