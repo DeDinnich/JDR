@@ -12,12 +12,11 @@
 <div class="page-heading">
     <div class="eyebrow">Possessions de {{ $character->name }}</div>
     <h1>Inventaire</h1>
-    <p>{{ $items->sum('quantity') }} objets · charge totale {{ number_format($totalWeight, 2, ',', ' ') }} kg</p>
+    <p>{{ $items->sum('quantity') }} objet(s) transporté(s).</p>
 </div>
 
-<div class="grid grid-3">
+<div class="grid grid-2">
     <div class="card metric"><div class="eyebrow">Objets équipés</div><div class="metric-value">{{ $items->where('equipped', true)->count() }}</div><div class="metric-note">Prêts à l’emploi</div></div>
-    <div class="card metric"><div class="eyebrow">Charge</div><div class="metric-value">{{ number_format($totalWeight, 1, ',', ' ') }} kg</div><div class="metric-note">Poids transporté</div></div>
 
     {{-- La bourse s'ajuste sur place : c'est le chiffre qui bouge le plus en partie. --}}
     <form class="card metric" method="POST" action="{{ route('player.resources.update') }}">
@@ -48,7 +47,6 @@
                 <div class="form-group"><label>Nom</label><input class="input" name="name" required></div>
                 <div class="form-group"><label>Catégorie</label><input class="input" name="category" value="Divers" required></div>
                 <div class="form-group"><label>Quantité</label><input class="input" type="number" min="1" name="quantity" value="1" required></div>
-                <div class="form-group"><label>Poids (kg)</label><input class="input" type="number" step="0.01" min="0" name="weight" value="0" required></div>
                 <div class="form-group full"><label>Description</label><input class="input" name="description"></div>
                 <label class="check"><input type="checkbox" name="equipped" value="1"> Équipé</label>
             </div>
@@ -90,7 +88,6 @@
                         <div class="form-group"><label>Nom</label><input class="input input-xs" name="name" value="{{ $item->name }}" required></div>
                         <div class="form-group"><label>Catégorie</label><input class="input input-xs" name="category" value="{{ $item->category }}" required></div>
                         <div class="form-group"><label>Qté</label><input class="input input-xs" type="number" min="1" name="quantity" value="{{ $item->quantity }}" required></div>
-                        <div class="form-group"><label>Poids</label><input class="input input-xs" type="number" step="0.01" min="0" name="weight" value="{{ $item->weight }}" required></div>
                         <div class="form-group" style="flex:1;min-width:12rem"><label>Description</label><input class="input input-xs" name="description" value="{{ $item->description }}"></div>
                         <label class="check"><input type="checkbox" name="equipped" value="1" @checked($item->equipped)> Équipé</label>
                         <button class="btn btn-secondary btn-sm" type="submit">Enregistrer</button>

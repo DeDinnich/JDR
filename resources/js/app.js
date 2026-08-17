@@ -163,7 +163,23 @@ document.querySelectorAll('.note-editor').forEach((editor) => {
     const title = editor.querySelector('.note-title');
     const content = editor.querySelector('.note-content');
     const pinned = editor.querySelector('.note-pinned');
+    const relationship = editor.querySelector('.note-relationship');
     let timer = null;
+
+    /*
+     * Le même éditeur sert le journal (titre + épingle) et les notes de
+     * glossaire (relation). On n'envoie donc que les champs réellement
+     * présents, plutôt que d'inventer des valeurs pour ceux qui manquent.
+     */
+    function payload() {
+        const body = {content: content.innerHTML};
+
+        if (title) body.title = title.value || 'Sans titre';
+        if (pinned) body.pinned = pinned.checked ? 1 : 0;
+        if (relationship) body.relationship = relationship.value;
+
+        return body;
+    }
 
     async function save() {
         status.textContent = 'Enregistrement…';
@@ -176,11 +192,7 @@ document.querySelectorAll('.note-editor').forEach((editor) => {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                 },
-                body: JSON.stringify({
-                    title: title.value || 'Sans titre',
-                    content: content.innerHTML,
-                    pinned: pinned.checked ? 1 : 0,
-                }),
+                body: JSON.stringify(payload()),
             });
 
             if (!response.ok) throw new Error(response.statusText);
@@ -200,8 +212,9 @@ document.querySelectorAll('.note-editor').forEach((editor) => {
     }
 
     content.addEventListener('input', scheduleSave);
-    title.addEventListener('input', scheduleSave);
-    pinned.addEventListener('change', save);
+    title?.addEventListener('input', scheduleSave);
+    pinned?.addEventListener('change', save);
+    relationship?.addEventListener('change', save);
 
     // Un onglet fermé au milieu d'une phrase ne doit pas perdre la frappe.
     window.addEventListener('beforeunload', () => {
@@ -210,9 +223,7 @@ document.querySelectorAll('.note-editor').forEach((editor) => {
             navigator.sendBeacon?.(url, new Blob([JSON.stringify({
                 _method: 'PUT',
                 _token: csrfToken,
-                title: title.value || 'Sans titre',
-                content: content.innerHTML,
-                pinned: pinned.checked ? 1 : 0,
+                ...payload(),
             })], {type: 'application/json'}));
         }
     });

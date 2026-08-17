@@ -15,14 +15,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * ne part pas dans le payload joueur et n'est ni modifiable ni supprimable par
  * lui : il n'est pas censé en connaître l'existence.
  */
-#[Fillable(['character_id', 'name', 'category', 'description', 'quantity', 'weight', 'equipped', 'is_visible_to_player'])]
+#[Fillable(['character_id', 'name', 'category', 'description', 'quantity', 'equipped', 'is_visible_to_player'])]
 class InventoryItem extends Model
 {
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
-            'weight' => 'decimal:2',
             'equipped' => 'boolean',
             'is_visible_to_player' => 'boolean',
         ];
@@ -37,10 +36,5 @@ class InventoryItem extends Model
     public function character(): BelongsTo
     {
         return $this->belongsTo(Character::class);
-    }
-
-    public function totalWeight(): float
-    {
-        return (float) $this->weight * $this->quantity;
     }
 }

@@ -15,8 +15,7 @@ use Illuminate\View\View;
  * Inventaire côté joueur.
  *
  * Les objets que le personnage transporte sans le savoir sont écartés dès la
- * requête : ils ne sont ni affichés, ni comptés dans la charge, ni présents
- * dans le HTML. Le joueur ne peut donc pas non plus les modifier — toutes les
+ * requête : ils ne sont ni affichés ni présents dans le HTML. Le joueur ne peut donc pas non plus les modifier — toutes les
  * écritures passent par ownedItem(), qui ne résout que les objets visibles de
  * SON personnage.
  */
@@ -31,7 +30,6 @@ class InventoryController extends Controller
             'character' => $character,
             'items' => $items,
             'groupedItems' => $items->groupBy('category'),
-            'totalWeight' => $items->sum(fn (InventoryItem $item) => $item->totalWeight()),
         ]);
     }
 

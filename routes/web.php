@@ -15,6 +15,7 @@ use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\Player\CharacterController as PlayerCharacterController;
 use App\Http\Controllers\Player\CharacterCreationController;
 use App\Http\Controllers\Player\GlossaryController;
+use App\Http\Controllers\Player\IdentityController;
 use App\Http\Controllers\Player\InventoryController as PlayerInventoryController;
 use App\Http\Controllers\Player\NoteController;
 use App\Http\Controllers\Player\NpcController;
@@ -68,6 +69,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/inventaire/{item}', [PlayerInventoryController::class, 'update'])->name('inventory.update');
         Route::delete('/inventaire/{item}', [PlayerInventoryController::class, 'destroy'])->name('inventory.destroy');
         Route::put('/ressources', [PlayerInventoryController::class, 'updateResources'])->name('resources.update');
+
+        // Identité et portrait : le joueur décrit son personnage lui-même.
+        Route::put('/identite', [IdentityController::class, 'update'])->name('identity.update');
+        Route::post('/portrait', [IdentityController::class, 'updatePortrait'])->name('portrait.update');
+        Route::delete('/portrait', [IdentityController::class, 'destroyPortrait'])->name('portrait.destroy');
         Route::get('/monde', [PlayerWorldController::class, 'index'])->name('world.index');
         Route::get('/monde/{map}', [PlayerWorldController::class, 'show'])->name('world.show');
         Route::get('/journal', [NoteController::class, 'index'])->name('notes.index');

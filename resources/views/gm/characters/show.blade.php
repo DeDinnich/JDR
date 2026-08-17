@@ -454,7 +454,7 @@
             <details class="card details-form">
                 <summary class="card-body">
                     <div class="actions" style="justify-content:space-between">
-                        <div><strong>{{ $item->name }}</strong><div class="small muted">{{ $item->category }} · {{ $item->quantity }} × {{ $item->weight }} kg</div></div>
+                        <div><strong>{{ $item->name }}</strong><div class="small muted">{{ $item->category }} · {{ $item->quantity }} × </div></div>
                         @if($item->equipped)<span class="badge badge-gold">Équipé</span>@endif
                     </div>
                 </summary>
@@ -464,7 +464,6 @@
                         <div class="form-group"><label>Nom</label><input class="input" name="name" value="{{ $item->name }}" required></div>
                         <div class="form-group"><label>Catégorie</label><input class="input" name="category" value="{{ $item->category }}" required></div>
                         <div class="form-group"><label>Quantité</label><input class="input" name="quantity" type="number" min="1" value="{{ $item->quantity }}" required></div>
-                        <div class="form-group"><label>Poids unitaire</label><input class="input" name="weight" type="number" min="0" step=".01" value="{{ $item->weight }}" required></div>
                         <div class="form-group full"><label>Description</label><textarea class="textarea" name="description">{{ $item->description }}</textarea></div>
                         <label class="check"><input type="checkbox" name="equipped" value="1" @checked($item->equipped)> Équipé</label>
                         <label class="check"><input type="checkbox" name="is_visible_to_player" value="1" @checked($item->is_visible_to_player)> Visible du joueur</label>
@@ -486,7 +485,7 @@
                     <div class="form-group"><label>Nom</label><input class="input" name="name" required></div>
                     <div class="form-group"><label>Catégorie</label><input class="input" name="category" value="Divers" required></div>
                     <div class="form-group"><label>Quantité</label><input class="input" name="quantity" type="number" min="1" value="1" required></div>
-                    <div class="form-group"><label>Poids</label><input class="input" name="weight" type="number" min="0" step=".01" value="0" required></div>
+                    
                     <div class="form-group full"><label>Description</label><textarea class="textarea" name="description"></textarea></div>
                     <label class="check"><input type="checkbox" name="equipped" value="1"> Équipé</label>
                     <label class="check"><input type="checkbox" name="is_visible_to_player" value="1" checked> Visible du joueur</label>

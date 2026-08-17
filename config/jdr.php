@@ -35,28 +35,35 @@ return [
         /*
          * Caractéristiques de départ selon l'origine familiale.
          *
-         * On grandit là où l'on naît : un enfant Valtheris passe ses journées
-         * dans une cour d'armes, un Aerendis dans une bibliothèque. Les écarts
-         * restent légers — c'est un point de départ, pas une classe. Le MJ
-         * ajuste ensuite librement.
+         * Ce sont des enfants de huit ans : tout démarre à 1. Seules les deux
+         * caractéristiques que la famille cultive vraiment partent à 2 — on
+         * grandit là où l'on naît, mais à cet âge cela ne fait qu'une nuance.
          *
-         * `default` sert de filet si une maison n'a pas d'entrée ici.
+         * Traduit en compétences (× 5), cela donne 5 % partout et 10 % sur ce
+         * que la maison enseigne. C'est volontairement très bas : au D100,
+         * presque tout échoue, et chaque point gagné se sentira.
+         *
+         * `base` est la valeur de départ commune ; `strengths` liste les deux
+         * caractéristiques portées à `bonus`.
          */
         'house_base_stats' => [
-            'default' => ['for' => 8, 'end' => 8, 'dex' => 8, 'int' => 8, 'cha' => 8, 'man' => 8],
+            'base' => 1,
+            'bonus' => 2,
 
-            // Maison militaire : on y tient une épée avant de tenir un livre.
-            'valtheris' => ['for' => 10, 'end' => 10, 'dex' => 9, 'int' => 7, 'cha' => 8, 'man' => 6],
+            'strengths' => [
+                // Maison militaire : la cour d'armes avant la bibliothèque.
+                'valtheris' => ['for', 'end'],
 
-            // Lignée d'érudits et de mages.
-            'aerendis' => ['for' => 6, 'end' => 7, 'dex' => 8, 'int' => 11, 'cha' => 9, 'man' => 10],
+                // Lignée d'érudits et de mages.
+                'aerendis' => ['int', 'man'],
 
-            // Maison politique : on y apprend à lire les gens.
-            'vaelmont' => ['for' => 7, 'end' => 8, 'dex' => 9, 'int' => 9, 'cha' => 11, 'man' => 8],
+                // Maison politique : on y apprend à lire les gens.
+                'vaelmont' => ['cha', 'int'],
 
-            // Origine réservée. Un potentiel magique inhabituel, que personne
-            // ne lui a expliqué.
-            'veyre' => ['for' => 7, 'end' => 9, 'dex' => 10, 'int' => 9, 'cha' => 8, 'man' => 11],
+                // Origine réservée. Un potentiel magique que personne ne lui a
+                // expliqué, et l'agilité d'une enfant qui grandit dehors.
+                'veyre' => ['man', 'dex'],
+            ],
         ],
 
         // États de visibilité d'une compétence, maîtrise, affinité ou capacité.
@@ -135,6 +142,21 @@ return [
             // peut toujours forcer une valeur en renseignant mana_max.
             'mana_max_per_man' => 4,
             'mana_max_flat_bonus' => 0,
+
+            /*
+             * Compétences : un pourcentage de réussite, testé au D100.
+             *
+             * La moyenne des caractéristiques est multipliée par ce facteur
+             * pour obtenir le pourcentage. Avec 5, une caractéristique de 20
+             * (le plafond humain) donne 100 % : l'échelle des caractéristiques
+             * et celle des compétences restent ainsi cohérentes.
+             *
+             * Des enfants de huit ans démarrent à 1, soit 5 % — c'est voulu :
+             * ils ratent presque tout, et chaque point gagné se sent.
+             */
+            'skill_percentage_per_point' => 5,
+            'skill_percentage_min' => 0,
+            'skill_percentage_max' => 100,
         ],
     ],
 

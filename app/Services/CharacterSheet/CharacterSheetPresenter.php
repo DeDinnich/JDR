@@ -94,6 +94,34 @@ class CharacterSheetPresenter
         ];
     }
 
+    /**
+     * Fiche d'un compagnon de route, vue par un autre joueur.
+     *
+     * Volontairement plus étroite que forPlayer() : on montre qui il est, sa
+     * forme et ses chiffres — ce que des enfants qui grandissent ensemble
+     * finissent par savoir les uns des autres — mais ni son inventaire, ni ses
+     * notes, ni ce que le MJ lui garde caché. Les compétences reprennent le
+     * filtre de SA fiche : ce qu'il ignore de lui-même ne fuite pas non plus.
+     *
+     * @return array<string, mixed>
+     */
+    public function forAlly(Character $character): array
+    {
+        $values = $this->formulas->attributeValues($character);
+
+        return [
+            'id' => $character->id,
+            'player_name' => $character->user?->name,
+            'house' => $character->house?->name,
+            'identity' => $this->identity($character),
+            'resources' => $this->resources($character),
+            'attributes' => $this->attributes($character, forPlayer: true),
+            'skills' => $this->skills($character, $values, forPlayer: true),
+            'masteries' => $this->masteries($character, forPlayer: true),
+            'states' => $this->states($character, forPlayer: true),
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function identity(Character $character): array
     {
@@ -202,11 +230,13 @@ class CharacterSheetPresenter
                     'category_label' => $definition->category->label(),
                     'attributes' => $definition->attributeLabel(),
                     // Décomposition explicite : le joueur comprend d'où sort
-                    // sa valeur finale sans que la vue ait à calculer.
-                    'base_value' => $value - $skill->bonus,
+                    // son pourcentage sans que la vue ait à calculer. On repart
+                    // du service plutôt que de soustraire le bonus, car la
+                    // valeur finale est bornée à 0–100.
+                    'base_value' => $this->formulas->skillBaseValue($skill, $attributeValues),
                     'bonus' => $skill->bonus,
                     'value' => $value,
-                    'display' => (string) $value,
+                    'display' => $value.' %',
                 ];
 
                 return $forPlayer ? $row : [
@@ -373,7 +403,6 @@ class CharacterSheetPresenter
                     'category' => $item->category,
                     'description' => $item->description,
                     'quantity' => $item->quantity,
-                    'weight' => $item->weight,
                     'equipped' => $item->equipped,
                 ];
 

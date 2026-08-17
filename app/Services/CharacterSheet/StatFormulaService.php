@@ -17,14 +17,29 @@ use Illuminate\Support\Collection;
 class StatFormulaService
 {
     /**
-     * Valeur d'une compétence.
+     * Pourcentage de réussite d'une compétence, testé au D100.
      *
-     * Formule par défaut : (caractéristique A + caractéristique B) / 2, arrondi
-     * à l'entier inférieur, plus le bonus personnel accordé par le MJ.
+     * Deux temps : on combine les caractéristiques concernées (moyenne par
+     * défaut), puis on convertit le résultat en pourcentage. Le bonus du MJ
+     * s'ajoute en points de pourcentage — un « +10 » vaut donc dix points de
+     * réussite, pas dix points de caractéristique.
+     *
+     * Le résultat est borné : une compétence ne descend pas sous 0 % et ne
+     * dépasse pas 100 %, sans quoi le jet de dé n'aurait plus de sens.
      *
      * @param  array<string, int>  $attributeValues  valeurs indexées par code de caractéristique
      */
     public function skillValue(CharacterSkill $skill, array $attributeValues): int
+    {
+        return $this->clampPercentage($this->skillBaseValue($skill, $attributeValues) + $skill->bonus);
+    }
+
+    /**
+     * Pourcentage issu des seules caractéristiques, avant bonus du MJ.
+     *
+     * @param  array<string, int>  $attributeValues
+     */
+    public function skillBaseValue(CharacterSkill $skill, array $attributeValues): int
     {
         $definition = $skill->definition;
 
@@ -33,15 +48,24 @@ class StatFormulaService
             ? ($attributeValues[$definition->secondaryAttribute->code] ?? 0)
             : null;
 
-        $base = match ($definition->formula) {
+        $combined = match ($definition->formula) {
             'primary' => $primary,
             'sum' => $primary + ($secondary ?? 0),
             'best' => max($primary, $secondary ?? $primary),
             // 'average' : comportement par défaut.
-            default => $secondary === null ? $primary : (int) floor(($primary + $secondary) / 2),
+            default => $secondary === null ? $primary : ($primary + $secondary) / 2,
         };
 
-        return $base + $skill->bonus;
+        $percentage = $combined * config('jdr.character.formulas.skill_percentage_per_point');
+
+        return $this->clampPercentage((int) floor($percentage));
+    }
+
+    private function clampPercentage(int $value): int
+    {
+        $formulas = config('jdr.character.formulas');
+
+        return max($formulas['skill_percentage_min'], min($formulas['skill_percentage_max'], $value));
     }
 
     /**

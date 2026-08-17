@@ -11,6 +11,7 @@ use App\Models\MagicSchool;
 use App\Models\MasteryDefinition;
 use App\Models\SkillDefinition;
 use App\Models\User;
+use App\Services\Campaign\CharacterCreationService;
 use App\Services\CharacterSheet\CharacterSheetBuilder;
 use Illuminate\Database\Seeder;
 
@@ -67,6 +68,14 @@ class DemoCharacterSeeder extends Seeder
         // Crée les lignes de fiche manquantes, toutes cachées par défaut.
         $builder->initialize($character);
 
+        // Une origine est indispensable : sans elle, le middleware renvoie le
+        // compte de démo vers l'écran de naissance et rien n'est consultable.
+        // On passe par le service pour que Kael rencontre aussi ses parents et
+        // que son glossaire ne soit pas vide.
+        if ($character->house_id === null) {
+            app(CharacterCreationService::class)->chooseOrigin($character, $user, 'aerendis');
+        }
+
         $this->setAttributes($character);
         $this->revealSomeSkills($character);
         $this->setAffinities($character);
@@ -81,15 +90,16 @@ class DemoCharacterSeeder extends Seeder
      */
     private function setAttributes(Character $character): void
     {
+        // Kael a six ans : tout est au plancher. Seules la dextérité et
+        // l'intelligence, que sa mère remarque, dépassent d'un point — ce qui
+        // fait 10 % au D100 sur les compétences concernées, contre 5 % ailleurs.
         $values = [
-            // Les caractéristiques sont toujours visibles : seule la valeur compte.
-            'for' => 7,
-            'end' => 9,
-            'dex' => 11,
-            'int' => 13,
-            'cha' => 8,
-            // Le potentiel magique de Kael est nettement au-dessus de la moyenne.
-            'man' => 15,
+            'for' => 1,
+            'end' => 1,
+            'dex' => 2,
+            'int' => 2,
+            'cha' => 1,
+            'man' => 1,
         ];
 
         $definitions = AttributeDefinition::query()->pluck('id', 'code');
@@ -195,20 +205,19 @@ class DemoCharacterSeeder extends Seeder
     private function addInventory(Character $character): void
     {
         $items = [
-            ['Couteau de poche', 'Outils', 'Lame ébréchée, manche en corne.', 1, 0.2, true, true],
-            ['Bille de verre bleue', 'Curiosités', 'Trouvée dans le lit du ruisseau.', 1, 0.05, false, true],
+            ['Couteau de poche', 'Outils', 'Lame ébréchée, manche en corne.', 1, true, true],
+            ['Bille de verre bleue', 'Curiosités', 'Trouvée dans le lit du ruisseau.', 1, false, true],
             // Objet caché : le MJ sait, le joueur non. Il ne part pas au front.
-            ['Lettre cousue dans la doublure', 'Secrets', "Un pli scellé, glissé dans son sac sans qu'il le sache.", 1, 0.01, false, false],
+            ['Lettre cousue dans la doublure', 'Secrets', "Un pli scellé, glissé dans son sac sans qu'il le sache.", 1, false, false],
         ];
 
-        foreach ($items as [$name, $category, $description, $quantity, $weight, $equipped, $visible]) {
+        foreach ($items as [$name, $category, $description, $quantity, $equipped, $visible]) {
             $character->inventoryItems()->updateOrCreate(
                 ['name' => $name],
                 [
                     'category' => $category,
                     'description' => $description,
                     'quantity' => $quantity,
-                    'weight' => $weight,
                     'equipped' => $equipped,
                     'is_visible_to_player' => $visible,
                 ]

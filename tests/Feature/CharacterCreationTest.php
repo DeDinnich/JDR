@@ -111,15 +111,19 @@ it('applique les caractéristiques de départ de la maison choisie', function ()
     actingAs($user)->post(route('player.creation.store'), ['first_name' => 'Lior']);
     actingAs($user)->post(route('player.creation.choose'), ['house' => 'valtheris']);
 
-    $expected = config('jdr.character.house_base_stats.valtheris');
+    $stats = config('jdr.character.house_base_stats');
     $values = $user->character()->firstOrFail()
         ->attributes()->with('definition')->get()
         ->mapWithKeys(fn ($attribute) => [$attribute->definition->code => $attribute->value]);
 
-    expect($values['for'])->toBe($expected['for'])
-        ->and($values['man'])->toBe($expected['man'])
-        // Une maison d'érudits ne donne pas les mêmes bases.
-        ->and($expected['for'])->not->toBe(config('jdr.character.house_base_stats.aerendis.for'));
+    // Des enfants : tout au plancher, sauf les deux forces de la maison.
+    expect($values['for'])->toBe($stats['bonus'])
+        ->and($values['end'])->toBe($stats['bonus'])
+        ->and($values['int'])->toBe($stats['base'])
+        ->and($values['cha'])->toBe($stats['base'])
+        ->and($values['man'])->toBe($stats['base'])
+        // Une maison d'érudits ne renforce pas les mêmes.
+        ->and($stats['strengths']['aerendis'])->not->toBe($stats['strengths']['valtheris']);
 });
 
 it('refuse une maison déjà prise et laisse le joueur rejouer', function () {

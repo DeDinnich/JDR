@@ -67,16 +67,47 @@ test('les six caractéristiques sont toujours transmises au joueur avec leur val
         ->assertSee('<span class="stat-value">17</span>', escape: false);
 });
 
-test('une compétence est calculée depuis les caractéristiques', function () {
-    // Combat rapproché = FOR / DEX, moyenne arrondie à l'entier inférieur.
+test('une compétence est un pourcentage calculé depuis les caractéristiques', function () {
+    // Combat rapproché = FOR / DEX. Moyenne (12+14)/2 = 13, puis × 5 = 65 %.
     ($this->attribute)('for')->update(['value' => 12]);
     ($this->attribute)('dex')->update(['value' => 14]);
 
     $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
 
-    expect($skill['base_value'])->toBe(13)
+    expect($skill['base_value'])->toBe(65)
         ->and($skill['bonus'])->toBe(0)
-        ->and($skill['value'])->toBe(13);
+        ->and($skill['value'])->toBe(65)
+        ->and($skill['display'])->toBe('65 %');
+});
+
+test('une compétence ne dépasse jamais 100 % ni ne descend sous 0 %', function () {
+    // Caractéristiques au plafond : la moyenne × 5 dépasserait 100.
+    ($this->attribute)('for')->update(['value' => 30]);
+    ($this->attribute)('dex')->update(['value' => 30]);
+
+    $definitionId = SkillDefinition::query()->where('code', 'combat-rapproche')->value('id');
+    $this->character->skills()->where('skill_definition_id', $definitionId)->update(['bonus' => 40]);
+
+    $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
+
+    expect($skill['value'])->toBe(100);
+
+    // Et un malus massif ne rend pas la compétence négative.
+    $this->character->skills()->where('skill_definition_id', $definitionId)->update(['bonus' => -999]);
+
+    $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
+
+    expect($skill['value'])->toBe(0);
+});
+
+test('un enfant de huit ans démarre à 5 % sur ses compétences', function () {
+    foreach (['for', 'end', 'dex', 'int', 'cha', 'man'] as $code) {
+        ($this->attribute)($code)->update(['value' => 1]);
+    }
+
+    $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
+
+    expect($skill['value'])->toBe(5);
 });
 
 test('le bonus manuel du MJ modifie la valeur finale de la compétence', function () {
@@ -88,9 +119,10 @@ test('le bonus manuel du MJ modifie la valeur finale de la compétence', functio
 
     $skill = ($this->sheetForPlayer)()['skills']->flatten(1)->firstWhere('code', 'combat-rapproche');
 
-    expect($skill['base_value'])->toBe(13)
+    // 65 % de base, plus 2 points de pourcentage accordés par le MJ.
+    expect($skill['base_value'])->toBe(65)
         ->and($skill['bonus'])->toBe(2)
-        ->and($skill['value'])->toBe(15);
+        ->and($skill['value'])->toBe(67);
 });
 
 test('une compétence cachée par le MJ est absente de la réponse joueur', function () {
@@ -130,8 +162,8 @@ test('le MJ voit la compétence cachée et sa note', function () {
 
 test('un objet caché de l’inventaire n’est jamais transmis au joueur', function () {
     $this->character->inventoryItems()->createMany([
-        ['name' => 'Couteau de poche', 'category' => 'Outils', 'quantity' => 1, 'weight' => 0.2, 'is_visible_to_player' => true],
-        ['name' => 'Lettre cousue', 'category' => 'Secrets', 'description' => 'Un pli scellé.', 'quantity' => 1, 'weight' => 0.01, 'is_visible_to_player' => false],
+        ['name' => 'Couteau de poche', 'category' => 'Outils', 'quantity' => 1, 'is_visible_to_player' => true],
+        ['name' => 'Lettre cousue', 'category' => 'Secrets', 'description' => 'Un pli scellé.', 'quantity' => 1, 'is_visible_to_player' => false],
     ]);
 
     $this->actingAs($this->player)->get(route('player.inventory'))
@@ -149,7 +181,7 @@ test('un objet caché de l’inventaire n’est jamais transmis au joueur', func
 test('le MJ voit les objets cachés de l’inventaire', function () {
     $this->character->inventoryItems()->create([
         'name' => 'Lettre cousue', 'category' => 'Secrets',
-        'quantity' => 1, 'weight' => 0.01, 'is_visible_to_player' => false,
+        'quantity' => 1, 'is_visible_to_player' => false,
     ]);
 
     $this->actingAs($this->gameMaster)->get(route('gm.characters.show', $this->character))

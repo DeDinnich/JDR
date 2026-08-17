@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Player;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\Character;
 use App\Services\CharacterSheet\CharacterSheetPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +34,26 @@ class CharacterController extends Controller
 
         return view('player.character', [
             'sheet' => $presenter->forPlayer($character),
+            'allies' => $this->allies($request, $presenter),
         ]);
+    }
+
+    /**
+     * Fiches des autres joueurs de la table.
+     *
+     * On passe par forAlly() et non forPlayer() : la vue d'un compagnon est
+     * plus étroite que la sienne propre — pas d'inventaire, pas de notes.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function allies(Request $request, CharacterSheetPresenter $presenter): array
+    {
+        return Character::query()
+            ->whereHas('user', fn ($query) => $query->where('role', UserRole::Player->value))
+            ->whereKeyNot($request->user()->character?->id)
+            ->with([...CharacterSheetPresenter::RELATIONS, 'house'])
+            ->get()
+            ->map(fn (Character $ally) => $presenter->forAlly($ally))
+            ->all();
     }
 }

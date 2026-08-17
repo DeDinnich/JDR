@@ -73,12 +73,14 @@
     <input class="sheet-tabs" type="radio" name="sheet-tab" id="tab-masteries">
     <input class="sheet-tabs" type="radio" name="sheet-tab" id="tab-abilities">
     <input class="sheet-tabs" type="radio" name="sheet-tab" id="tab-story">
+    <input class="sheet-tabs" type="radio" name="sheet-tab" id="tab-allies">
 
     <nav class="tab-bar" aria-label="Sections de la fiche">
         <label for="tab-overview">Compétences</label>
         <label for="tab-masteries">Maîtrises</label>
         <label for="tab-abilities">Capacités</label>
         <label for="tab-story">Histoire</label>
+        <label for="tab-allies">Autres joueurs</label>
     </nav>
 
     <div class="sheet-panels">
@@ -201,7 +203,10 @@
         <section class="sheet-panel">
             <div class="grid grid-2">
                 <section class="card">
-                    <header class="card-header"><h2>Qui tu es</h2></header>
+                    <header class="card-header">
+                        <h2>Qui tu es</h2>
+                        <label class="btn btn-ghost btn-sm" for="edit-identity" title="Modifier">✎</label>
+                    </header>
                     <div class="card-body list">
                         @foreach([
                             'Prénom' => $identity['first_name'],
@@ -225,8 +230,12 @@
 
                 <div class="stack">
                     <section class="card">
-                        <header class="card-header"><h2>Ton histoire</h2>
-                            @if($identity['background'])<span class="badge badge-gold">{{ $identity['background'] }}</span>@endif
+                        <header class="card-header">
+                            <h2>Ton histoire</h2>
+                            <div class="actions">
+                                @if($identity['background'])<span class="badge badge-gold">{{ $identity['background'] }}</span>@endif
+                                <label class="btn btn-ghost btn-sm" for="edit-story" title="Modifier">✎</label>
+                            </div>
                         </header>
                         <div class="card-body">
                             <p class="muted" style="margin:0;line-height:1.75;white-space:pre-line">{{ $identity['biography'] ?: 'Ce chapitre reste encore à écrire.' }}</p>
@@ -265,6 +274,162 @@
                 </section>
             @endif
         </section>
+
+        {{-- ── Autres joueurs ──────────────────────────────────────────── --}}
+        <section class="sheet-panel">
+            <div class="section-title">
+                <div>
+                    <h2>Autres joueurs</h2>
+                    <p>Ceux avec qui tu grandis. Tu vois leurs chiffres, pas leur sac ni leurs notes.</p>
+                </div>
+            </div>
+
+            @forelse($allies as $ally)
+                <section class="card section">
+                    <header class="card-header">
+                        <div class="actions">
+                            <span class="brand-mark">
+                                @if($ally['identity']['portrait_path'])
+                                    <img src="{{ $ally['identity']['portrait_path'] }}" alt="">
+                                @else
+                                    {{ $ally['identity']['initials'] }}
+                                @endif
+                            </span>
+                            <div>
+                                <h3 style="margin:0">{{ $ally['identity']['name'] }}</h3>
+                                <span class="eyebrow">
+                                    joué par {{ $ally['player_name'] }}@if($ally['house']) · {{ $ally['house'] }}@endif
+                                </span>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <span class="badge">{{ $ally['resources']['health'] }} / {{ $ally['resources']['max_health'] }} PV</span>
+                            <span class="badge">{{ $ally['resources']['mana'] }} / {{ $ally['resources']['mana_max'] }} mana</span>
+                        </div>
+                    </header>
+
+                    <div class="card-body">
+                        <div class="stat-grid">
+                            @foreach($ally['attributes'] as $attribute)
+                                <div class="card stat-card">
+                                    <span class="stat-abbr">{{ $attribute['abbreviation'] }}</span>
+                                    <span class="stat-value">{{ $attribute['display'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        @php($topSkills = $ally['skills']->flatten(1)->sortByDesc('value')->take(6))
+                        @if($topSkills->isNotEmpty())
+                            <div class="skill-list section">
+                                @foreach($topSkills as $skill)
+                                    @include('components.sheet.skill-row', ['skill' => $skill])
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if($ally['states']->isNotEmpty())
+                            <div class="actions">
+                                @foreach($ally['states'] as $state)
+                                    <span class="state-chip">
+                                        @if($state['icon'])<span class="state-icon">{{ $state['icon'] }}</span>@endif
+                                        {{ $state['name'] }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </section>
+            @empty
+                <div class="card empty">Tu es seul à la table pour l’instant.</div>
+            @endforelse
+        </section>
+    </div>
+</div>
+
+{{-- ── Modales d'édition ───────────────────────────────────────────────── --}}
+<input class="modal-toggle" type="checkbox" id="edit-identity" hidden>
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Modifier ton identité">
+    <label class="modal-backdrop" for="edit-identity" aria-hidden="true"></label>
+    <div class="modal-panel card modal-panel-wide">
+        <header class="card-header">
+            <h2>Qui tu es</h2>
+            <label class="btn btn-ghost btn-sm" for="edit-identity" title="Fermer">✕</label>
+        </header>
+
+        {{-- Portrait : formulaire séparé, car il transporte un fichier. --}}
+        <form method="POST" action="{{ route('player.portrait.update') }}" enctype="multipart/form-data" class="card-body">
+            @csrf
+            <div class="actions">
+                <span class="brand-mark">
+                    @if($identity['portrait_path'])
+                        <img src="{{ $identity['portrait_path'] }}" alt="">
+                    @else
+                        {{ $identity['initials'] }}
+                    @endif
+                </span>
+                <div class="form-group" style="flex:1;min-width:12rem">
+                    <label for="portrait">Portrait (JPEG, PNG ou WebP — 4 Mo max)</label>
+                    <input class="input" id="portrait" type="file" name="portrait" accept="image/jpeg,image/png,image/webp" required>
+                </div>
+                <button class="btn btn-secondary btn-sm" type="submit">Envoyer</button>
+            </div>
+            @error('portrait')<p class="form-error">{{ $message }}</p>@enderror
+        </form>
+
+        @if($identity['portrait_path'])
+            <form method="POST" action="{{ route('player.portrait.destroy') }}" class="card-body" style="padding-top:0">
+                @csrf @method('DELETE')
+                <button class="btn btn-ghost btn-sm" type="submit">Retirer le portrait</button>
+            </form>
+        @endif
+
+        <form method="POST" action="{{ route('player.identity.update') }}" class="card-body" style="padding-top:0">
+            @csrf @method('PUT')
+            <div class="form-grid">
+                <div class="form-group"><label>Prénom</label><input class="input" name="first_name" value="{{ old('first_name', $identity['first_name']) }}" required></div>
+                <div class="form-group"><label>Nom</label><input class="input" name="last_name" value="{{ old('last_name', $identity['last_name']) }}"></div>
+                <div class="form-group"><label>Surnom</label><input class="input" name="nickname" value="{{ old('nickname', $identity['nickname']) }}"></div>
+                <div class="form-group"><label>Genre</label><input class="input" name="gender" value="{{ old('gender', $identity['gender']) }}"></div>
+                <div class="form-group"><label>Race</label><input class="input" name="ancestry" value="{{ old('ancestry', $identity['race']) }}"></div>
+                <div class="form-group"><label>Lieu actuel</label><input class="input" name="current_location" value="{{ old('current_location', $identity['current_location']) }}"></div>
+                <div class="form-group"><label>Statut</label><input class="input" name="occupation" value="{{ old('occupation', $identity['occupation']) }}"></div>
+                <div class="form-group"><label>Titre</label><input class="input" name="adventurer_title" value="{{ old('adventurer_title', $identity['adventurer_title']) }}"></div>
+            </div>
+            {{-- Histoire et traits voyagent avec l'identité : un seul enregistrement. --}}
+            <input type="hidden" name="background" value="{{ $identity['background'] }}">
+            <input type="hidden" name="biography" value="{{ $identity['biography'] }}">
+            <input type="hidden" name="traits" value="{{ $identity['traits'] }}">
+            <button class="btn btn-primary btn-sm" type="submit" style="margin-top:.8rem">Enregistrer</button>
+        </form>
+    </div>
+</div>
+
+<input class="modal-toggle" type="checkbox" id="edit-story" hidden>
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Modifier ton histoire">
+    <label class="modal-backdrop" for="edit-story" aria-hidden="true"></label>
+    <div class="modal-panel card modal-panel-wide">
+        <header class="card-header">
+            <h2>Ton histoire</h2>
+            <label class="btn btn-ghost btn-sm" for="edit-story" title="Fermer">✕</label>
+        </header>
+        <form method="POST" action="{{ route('player.identity.update') }}" class="card-body">
+            @csrf @method('PUT')
+            <div class="form-group"><label>Historique en une ligne</label><input class="input" name="background" value="{{ old('background', $identity['background']) }}" placeholder="Enfant de fermiers"></div>
+            <div class="form-group"><label>Biographie</label><textarea class="textarea" name="biography" rows="9">{{ old('biography', $identity['biography']) }}</textarea></div>
+            <div class="form-group"><label>Traits particuliers</label><textarea class="textarea" name="traits" rows="4">{{ old('traits', $identity['traits']) }}</textarea></div>
+
+            {{-- L'identité voyage avec l'histoire, pour la même raison. --}}
+            <input type="hidden" name="first_name" value="{{ $identity['first_name'] }}">
+            <input type="hidden" name="last_name" value="{{ $identity['last_name'] }}">
+            <input type="hidden" name="nickname" value="{{ $identity['nickname'] }}">
+            <input type="hidden" name="gender" value="{{ $identity['gender'] }}">
+            <input type="hidden" name="ancestry" value="{{ $identity['race'] }}">
+            <input type="hidden" name="current_location" value="{{ $identity['current_location'] }}">
+            <input type="hidden" name="occupation" value="{{ $identity['occupation'] }}">
+            <input type="hidden" name="adventurer_title" value="{{ $identity['adventurer_title'] }}">
+
+            <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
+        </form>
     </div>
 </div>
 @endsection

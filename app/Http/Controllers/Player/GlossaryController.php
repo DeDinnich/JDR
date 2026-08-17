@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Player\UpdateNpcNotesRequest;
 use App\Models\Npc;
 use App\Services\Campaign\NpcPresenter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -37,13 +38,21 @@ class GlossaryController extends Controller
         return view('player.glossary.show', ['npc' => $entry]);
     }
 
-    /** Notes personnelles : propres au joueur, sans effet sur la fiche officielle. */
-    public function updateNotes(UpdateNpcNotesRequest $request, Npc $npc): RedirectResponse
+    /**
+     * Notes personnelles : propres au joueur, sans effet sur la fiche
+     * officielle du PNJ.
+     *
+     * L'éditeur enregistre en arrière-plan dès que le joueur cesse d'écrire ;
+     * on répond alors en JSON plutôt qu'en redirection.
+     */
+    public function updateNotes(UpdateNpcNotesRequest $request, Npc $npc): RedirectResponse|JsonResponse
     {
         abort_unless($request->user()->discoveredNpcs()->whereKey($npc->id)->exists(), 404);
 
-        $request->user()->discoveredNpcs()->updateExistingPivot($npc->id, $request->validated());
+        $request->user()->discoveredNpcs()->updateExistingPivot($npc->id, $request->payload());
 
-        return back()->with('success', 'Tes notes ont été enregistrées.');
+        return $request->wantsJson()
+            ? response()->json(['saved_at' => now()->format('H:i')])
+            : back()->with('success', 'Tes notes ont été enregistrées.');
     }
 }

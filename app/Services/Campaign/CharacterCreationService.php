@@ -131,24 +131,23 @@ class CharacterCreationService
     /**
      * Applique les caractéristiques de départ liées à l'origine.
      *
-     * On grandit là où l'on naît : les écarts entre maisons restent légers et
-     * vivent dans config('jdr.character.house_base_stats'), jamais en dur ici.
+     * Tout part au plancher — ce sont des enfants — sauf les deux
+     * caractéristiques que la maison cultive. Les valeurs vivent dans
+     * config('jdr.character.house_base_stats'), jamais en dur ici.
      */
     private function applyHouseBaseStats(Character $character, House $house): void
     {
         $stats = config('jdr.character.house_base_stats');
-        $values = $stats[$house->slug] ?? $stats['default'];
+        $strengths = $stats['strengths'][$house->slug] ?? [];
 
         $definitions = AttributeDefinition::query()->pluck('id', 'code');
 
-        foreach ($values as $code => $value) {
-            if (! isset($definitions[$code])) {
-                continue;
-            }
-
+        foreach ($definitions as $code => $definitionId) {
             $character->attributes()
-                ->where('attribute_definition_id', $definitions[$code])
-                ->update(['value' => $value]);
+                ->where('attribute_definition_id', $definitionId)
+                ->update([
+                    'value' => in_array($code, $strengths, true) ? $stats['bonus'] : $stats['base'],
+                ]);
         }
     }
 

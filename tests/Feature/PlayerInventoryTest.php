@@ -27,7 +27,6 @@ it('permet au joueur d’ajouter, modifier puis retirer un objet', function () {
         'name' => 'Corde de chanvre',
         'category' => 'Outils',
         'quantity' => 1,
-        'weight' => 1.5,
     ])->assertSessionHasNoErrors();
 
     $item = $this->character->inventoryItems()->firstOrFail();
@@ -40,7 +39,6 @@ it('permet au joueur d’ajouter, modifier puis retirer un objet', function () {
         'name' => 'Corde solide',
         'category' => 'Outils',
         'quantity' => 2,
-        'weight' => 3,
         'equipped' => '1',
     ])->assertSessionHasNoErrors();
 
@@ -57,11 +55,11 @@ it('permet au joueur d’ajouter, modifier puis retirer un objet', function () {
 it('empêche le joueur de toucher un objet qu’il ignore transporter', function () {
     $hidden = $this->character->inventoryItems()->create([
         'name' => 'Lettre cousue', 'category' => 'Secrets',
-        'quantity' => 1, 'weight' => 0.01, 'is_visible_to_player' => false,
+        'quantity' => 1, 'is_visible_to_player' => false,
     ]);
 
     $this->actingAs($this->player)->put(route('player.inventory.update', $hidden), [
-        'name' => 'Découvert', 'category' => 'Secrets', 'quantity' => 1, 'weight' => 0.01,
+        'name' => 'Découvert', 'category' => 'Secrets', 'quantity' => 1,
     ])->assertNotFound();
 
     $this->actingAs($this->player)->delete(route('player.inventory.destroy', $hidden))
@@ -73,7 +71,7 @@ it('empêche le joueur de toucher un objet qu’il ignore transporter', function
 it('empêche le joueur de toucher le sac d’un autre', function () {
     $foreign = $this->other->character->inventoryItems()->create([
         'name' => 'Amulette', 'category' => 'Bijoux',
-        'quantity' => 1, 'weight' => 0.1, 'is_visible_to_player' => true,
+        'quantity' => 1, 'is_visible_to_player' => true,
     ]);
 
     $this->actingAs($this->player)->delete(route('player.inventory.destroy', $foreign))

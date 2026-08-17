@@ -40,28 +40,45 @@
     </div>
 </section>
 
-<section class="card section">
+{{-- Même éditeur que le journal : barre d'outils et enregistrement
+     automatique dès que le joueur cesse d'écrire. --}}
+<section class="card section note-editor" data-note-url="{{ route('player.glossary.notes', $npc['id']) }}">
     <header class="card-header">
-        <div><h2>Tes notes</h2><p class="muted small" style="margin:.2rem 0 0">Personnelles. Elles n’apparaissent que pour toi.</p></div>
+        <div>
+            <h2>Tes notes</h2>
+            <p class="muted small" style="margin:.2rem 0 0">Personnelles. Elles n’apparaissent que pour toi et ne touchent pas sa fiche.</p>
+        </div>
+        <div class="actions">
+            <span class="badge note-status" aria-live="polite">Enregistrées</span>
+        </div>
     </header>
-    <form method="POST" action="{{ route('player.glossary.notes', $npc['id']) }}" class="card-body">
-        @csrf @method('PUT')
-        <div class="form-group">
-            <label for="relationship">Ce que tu ressens</label>
+
+    <div class="note-toolbar" role="toolbar" aria-label="Mise en forme">
+        <button type="button" class="btn btn-ghost btn-sm" data-command="bold" title="Gras"><strong>G</strong></button>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="italic" title="Italique"><em>I</em></button>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="underline" title="Souligné"><u>S</u></button>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="strikeThrough" title="Barré"><s>B</s></button>
+        <span class="toolbar-separator" aria-hidden="true"></span>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="formatBlock" data-value="h3" title="Titre">T</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="insertUnorderedList" title="Liste à puces">•</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="insertOrderedList" title="Liste numérotée">1.</button>
+        <span class="toolbar-separator" aria-hidden="true"></span>
+        <button type="button" class="btn btn-ghost btn-sm" data-command="removeFormat" title="Effacer la mise en forme">✕</button>
+    </div>
+
+    <div class="note-content" contenteditable="true" role="textbox" aria-multiline="true"
+         aria-label="Tes notes sur {{ $npc['name'] }}">{!! $npc['personal_notes'] !!}</div>
+
+    <div class="card-body" style="padding-top:0">
+        <label class="check">
+            Ce que tu ressens
             @php($current = $npc['relationship'] ?: 'neutre')
-            <select class="select" id="relationship" name="relationship">
+            <select class="select input-xs note-relationship" name="relationship" style="margin-left:.5rem">
                 @foreach(['allie' => 'Allié', 'neutre' => 'Neutre', 'mefiance' => 'Méfiance', 'ennemi' => 'Ennemi'] as $value => $label)
                     <option value="{{ $value }}" @selected($current === $value)>{{ $label }}</option>
                 @endforeach
             </select>
-        </div>
-
-        <div class="form-group">
-            <label for="personal_notes">Ce que tu en penses</label>
-            <textarea class="input" id="personal_notes" name="personal_notes" rows="5"
-                      placeholder="Je pense qu’il ment.">{{ old('personal_notes', $npc['personal_notes']) }}</textarea>
-        </div>
-        <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
-    </form>
+        </label>
+    </div>
 </section>
 @endsection
