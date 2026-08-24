@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\SecretMessageDeleted;
 use App\Events\SecretMessageRead;
 use App\Events\SecretMessageSent;
 use App\Models\SecretMessage;
@@ -30,5 +31,13 @@ class SecretMessageService
         }
 
         return $message;
+    }
+
+    public function delete(SecretMessage $message): void
+    {
+        $event = new SecretMessageDeleted($message);
+
+        $message->delete();
+        event($event);
     }
 }

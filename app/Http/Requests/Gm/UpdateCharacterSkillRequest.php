@@ -17,6 +17,7 @@ class UpdateCharacterSkillRequest extends FormRequest
     {
         return [
             'bonus' => ['required', 'integer', 'min:-50', 'max:50'],
+            'player_bonus' => ['sometimes', 'required', 'integer', 'min:-50', 'max:50'],
             'reveal_state' => ['required', Rule::enum(RevealState::class)],
             'gm_notes' => ['nullable', 'string', 'max:2000'],
         ];

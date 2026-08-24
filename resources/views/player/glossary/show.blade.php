@@ -11,7 +11,10 @@
 <section class="card">
     <div class="card-body">
         <div class="actions">
-            <span class="brand-mark">{{ $npc['initials'] }}</span>
+            <span class="npc-profile-portrait">
+                @if($npc['portrait_path'])<img src="{{ $npc['portrait_path'] }}" alt="Portrait de {{ $npc['name'] }}">
+                @else{{ $npc['initials'] }}@endif
+            </span>
             <div>
                 @if($npc['nickname'])<div class="eyebrow">« {{ $npc['nickname'] }} »</div>@endif
                 @if($npc['known_location'])<div class="small muted">Vu à {{ $npc['known_location'] }}</div>@endif

@@ -64,11 +64,8 @@ class MapTileService
                 imagewebp($tile, null, 82);
                 Storage::disk(self::DISK)->put($this->tilePath($map, $column, $row), ob_get_clean());
 
-                imagedestroy($tile);
             }
         }
-
-        imagedestroy($source);
 
         // L'image entière reste stockée en privé : elle sert d'aperçu au MJ et
         // permet de re-découper si le quadrillage change.
@@ -113,11 +110,9 @@ class MapTileService
                 imagewebp($tile, null, 82);
                 Storage::disk(self::DISK)->put($this->tilePath($map, $column, $row), ob_get_clean());
 
-                imagedestroy($tile);
             }
         }
 
-        imagedestroy($source);
     }
 
     /** Contenu binaire d'une tuile, ou null si elle n'a pas été produite. */

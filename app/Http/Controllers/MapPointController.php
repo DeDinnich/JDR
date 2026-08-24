@@ -48,6 +48,7 @@ class MapPointController extends Controller
             'color' => $point->color,
             'x' => $point->x_position,
             'y' => $point->y_position,
+            'delete_url' => route('maps.points.destroy', [$map, $point]),
         ], 201);
     }
 

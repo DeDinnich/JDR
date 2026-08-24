@@ -11,12 +11,11 @@
 <div class="grid grid-3">
     @forelse($maps as $map)
         <a class="card card-link" href="{{ route('player.world.show', $map) }}">
-            <div class="map-card-image" style="background-image:url('{{ $map->image_path ?: '/images/maps/royaumes-oublies.svg' }}')"></div>
+            <img class="map-card-image" src="{{ $map->hasGrid() ? route('maps.preview', $map) : '/images/maps/royaumes-oublies.svg' }}" alt="Terres révélées sur {{ $map->title }}" loading="lazy">
             <div class="card-body">
                 <div class="actions" style="justify-content:space-between"><span class="eyebrow">Zone découverte</span>@if($map->is_active)<span class="badge badge-green">Zone actuelle</span>@endif</div>
                 <h2 class="display" style="margin:.55rem 0;font-size:1.45rem">{{ $map->title }}</h2>
-                <p class="muted small" style="margin:0 0 1rem">{{ Str::limit($map->description, 120) }}</p>
-                <span class="badge badge-gold">{{ $map->locations_count }} lieu(x) connu(s)</span>
+                @if($map->description)<p class="muted small" style="margin:0">{{ Str::limit($map->description, 120) }}</p>@endif
             </div>
         </a>
     @empty

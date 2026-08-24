@@ -25,10 +25,13 @@ use App\Models\GameMap;
 use App\Models\InventoryItem;
 use App\Models\MasteryDefinition;
 use App\Services\CharacterManagementService;
+use App\Services\CharacterSheet\AttributeService;
 use App\Services\CharacterSheet\CharacterRevealService;
 use App\Services\CharacterSheet\CharacterSheetBuilder;
 use App\Services\CharacterSheet\CharacterSheetPresenter;
 use App\Services\CharacterSheet\CharacterStateService;
+use App\Services\CharacterSheet\SkillBonusService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -83,9 +86,14 @@ class CharacterController extends Controller
         UpdateAttributeRequest $request,
         Character $character,
         CharacterAttribute $attribute,
-    ): RedirectResponse {
+        AttributeService $service,
+    ): JsonResponse|RedirectResponse {
         $this->ensureOwnership($character, $attribute);
-        $attribute->update($request->validated());
+        $payload = $service->update($attribute, $request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json($payload);
+        }
 
         return back()->with('success', 'Caractéristique mise à jour.');
     }
@@ -106,10 +114,18 @@ class CharacterController extends Controller
 
     // ── Compétences ───────────────────────────────────────────────────────
 
-    public function updateSkill(UpdateCharacterSkillRequest $request, Character $character, CharacterSkill $skill): RedirectResponse
-    {
+    public function updateSkill(
+        UpdateCharacterSkillRequest $request,
+        Character $character,
+        CharacterSkill $skill,
+        SkillBonusService $service,
+    ): JsonResponse|RedirectResponse {
         $this->ensureOwnership($character, $skill);
-        $skill->update($request->validated());
+        $payload = $service->update($skill, $request->validated(), forGameMaster: true);
+
+        if ($request->expectsJson()) {
+            return response()->json($payload);
+        }
 
         return back()->with('success', 'Compétence mise à jour.');
     }

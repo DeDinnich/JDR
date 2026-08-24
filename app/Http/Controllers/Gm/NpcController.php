@@ -13,6 +13,7 @@ use App\Models\NpcInformation;
 use App\Models\NpcSecret;
 use App\Services\Campaign\NpcImportService;
 use App\Services\Campaign\NpcRevealService;
+use App\Services\NpcPortraitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,22 +73,31 @@ class NpcController extends Controller
         ]);
     }
 
-    public function store(NpcRequest $request): RedirectResponse
+    public function store(NpcRequest $request, NpcPortraitService $portraits): RedirectResponse
     {
         $npc = Npc::create($request->payload());
+
+        if ($request->hasFile('portrait')) {
+            $portraits->replace($npc, $request->file('portrait'));
+        }
 
         return redirect()->route('gm.npcs.detail', $npc)->with('success', 'PNJ créé.');
     }
 
-    public function update(NpcRequest $request, Npc $npc): RedirectResponse
+    public function update(NpcRequest $request, Npc $npc, NpcPortraitService $portraits): RedirectResponse
     {
         $npc->update($request->payload());
+
+        if ($request->hasFile('portrait')) {
+            $portraits->replace($npc, $request->file('portrait'));
+        }
 
         return back()->with('success', 'PNJ mis à jour.');
     }
 
-    public function destroy(Npc $npc): RedirectResponse
+    public function destroy(Npc $npc, NpcPortraitService $portraits): RedirectResponse
     {
+        $portraits->remove($npc);
         $npc->delete();
 
         return redirect()->route('gm.npcs.index')->with('success', 'PNJ supprimé.');

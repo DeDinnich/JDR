@@ -29,6 +29,7 @@ class NpcRequest extends FormRequest
             'personality' => ['nullable', 'string', 'max:5000'],
             'game_master_notes' => ['nullable', 'string', 'max:5000'],
             'portrait_path' => ['nullable', 'string', 'max:255'],
+            'portrait' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
             'status' => ['required', Rule::in(array_keys(config('jdr.campaign.npc_statuses')))],
             'importance' => ['required', Rule::in(array_keys(config('jdr.campaign.npc_importances')))],
             'tags' => ['nullable', 'string', 'max:500'],
@@ -38,7 +39,7 @@ class NpcRequest extends FormRequest
     /** @return array<string, mixed> */
     public function payload(): array
     {
-        $data = $this->safe()->except('tags');
+        $data = $this->safe()->except(['tags', 'portrait']);
 
         // Les tags arrivent en texte libre séparé par des virgules.
         $data['tags'] = collect(explode(',', (string) $this->input('tags')))

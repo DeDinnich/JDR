@@ -7,7 +7,7 @@
     <title>@yield('title', 'Le 6ᵉ Monde') · Compagnon JDR</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-user-id="{{ auth()->id() }}" data-user-role="{{ auth()->user()->role->value }}">
+<body data-user-id="{{ auth()->id() }}" data-user-role="{{ auth()->user()->role->value }}" data-user-name="{{ auth()->user()->name }}">
 <div class="shell">
     <aside class="sidebar">
         <a href="{{ route('home') }}" class="brand">
@@ -30,6 +30,10 @@
                 <a class="nav-link {{ request()->routeIs('player.notes.*', 'player.npcs.*') ? 'active' : '' }}" href="{{ route('player.notes.index') }}"><span class="nav-icon">≡</span>Journal & rencontres</a>
                 <a class="nav-link {{ request()->routeIs('player.glossary.*') ? 'active' : '' }}" href="{{ route('player.glossary.index') }}"><span class="nav-icon">☗</span>Glossaire</a>
             @endif
+            <a class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}" href="{{ route('chat.index') }}">
+                <span class="nav-icon">✉</span>Chat
+                <span class="badge badge-gold is-hidden" data-global-chat-unread>0</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -67,7 +71,10 @@
         <div class="eyebrow" data-secret-priority>Message du maître du jeu</div>
         <h2>Pour vos yeux seulement</h2>
         <p class="secret-body" data-secret-body></p>
-        <button class="btn btn-primary" type="button" data-secret-dismiss>J’ai compris</button>
+        <div class="actions" style="justify-content:center">
+            <button class="btn btn-primary" type="button" data-secret-dismiss>J’ai compris</button>
+            <button class="btn btn-ghost btn-icon danger" type="button" data-secret-delete title="Supprimer des deux côtés" aria-label="Supprimer ce message des deux côtés">🗑</button>
+        </div>
     </div>
 </div>
 

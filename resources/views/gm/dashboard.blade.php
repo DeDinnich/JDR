@@ -9,16 +9,22 @@
 </div>
 
 <div class="grid grid-4">
-    @forelse($players as $player)
-        @php($character = $player->character)
-        <a class="card card-link" href="{{ route('gm.characters.show', $character) }}">
+    @forelse($playerCards as $card)
+        @php($player = $card['player'])
+        @php($character = $card['character'])
+        <article class="card gm-player-card">
             <div class="card-body">
-                <div class="npc-row"><span class="avatar">{{ collect(explode(' ', $character->name))->map(fn($part) => mb_substr($part,0,1))->take(2)->implode('') }}</span><div><span class="eyebrow">{{ $player->name }}</span><br><strong class="display" style="font-size:1.15rem">{{ $character->name }}</strong></div></div>
-                <div style="margin-top:1rem"><div class="small muted" style="display:flex;justify-content:space-between;margin-bottom:.35rem"><span>{{ $character->status }}</span><span>{{ $character->health }} / {{ $character->max_health }} PV</span></div><div class="health-bar"><span style="width:{{ $character->healthPercentage() }}%"></span></div></div>
+                <a class="npc-row gm-player-card-link" href="{{ route('gm.characters.show', $character) }}">
+                    <span class="avatar">
+                        @if($character->portrait_path)<img src="{{ $character->portrait_path }}" alt="">@else{{ collect(explode(' ', $character->displayName()))->map(fn($part) => mb_substr($part,0,1))->take(2)->implode('') }}@endif
+                    </span>
+                    <span><span class="eyebrow">{{ $player->name }}</span><br><strong class="display" style="font-size:1.15rem">{{ $character->displayName() }}</strong></span>
+                </a>
+                <x-sheet.resource-sliders :resources="$card['resources']" :character-id="$character->id" />
                 <hr class="divider">
-                <div class="actions" style="justify-content:space-between"><span class="badge">{{ $character->currentMap?->title ?? 'Sans zone' }}</span><span class="small gold">Gérer →</span></div>
+                <div class="actions" style="justify-content:space-between"><span class="small muted">{{ $character->status }}</span><a class="small gold" href="{{ route('gm.characters.show', $character) }}">Gérer →</a></div>
             </div>
-        </a>
+        </article>
     @empty
         <div class="card empty span-2">Aucun joueur n’a encore rejoint la campagne.</div>
     @endforelse
@@ -45,22 +51,53 @@
         <header class="card-header"><h2>Derniers messages</h2><span class="badge">Accusés de lecture</span></header>
         <div class="card-body list">
             @forelse($messages as $message)
-                <div class="list-row"><div><div class="actions"><strong>{{ $message->recipient->name }}</strong></div><div class="small muted">{{ Str::limit($message->body, 82) }}</div><div class="eyebrow" style="margin-top:.3rem">{{ $message->created_at->diffForHumans() }}</div></div><span data-message-id="{{ $message->id }}" class="badge {{ $message->read_at ? 'badge-green' : 'badge-gold' }}">{{ $message->read_at ? 'Lu' : 'En attente' }}</span></div>
+                <div class="list-row" data-secret-message-row="{{ $message->id }}">
+                    <div>
+                        <div class="actions"><strong>{{ $message->recipient->name }}</strong></div>
+                        <div class="small muted">{{ Str::limit($message->body, 82) }}</div>
+                        <div class="eyebrow" style="margin-top:.3rem">{{ $message->created_at->diffForHumans() }}</div>
+                    </div>
+                    <div class="message-row-actions">
+                        <span data-message-id="{{ $message->id }}" class="badge {{ $message->read_at ? 'badge-green' : 'badge-gold' }}">{{ $message->read_at ? 'Lu' : 'En attente' }}</span>
+                        <form method="POST" action="{{ route('messages.destroy', $message) }}" data-secret-message-delete-form>
+                            @csrf @method('DELETE')
+                            <button class="btn btn-ghost btn-icon danger" type="submit" title="Supprimer des deux côtés" aria-label="Supprimer ce message des deux côtés">🗑</button>
+                        </form>
+                    </div>
+                </div>
             @empty<div class="empty">Aucun message envoyé.</div>@endforelse
         </div>
     </section>
 </div>
 
 <section class="section">
-    <div class="section-title"><div><h2>Commandes rapides</h2><p>Les leviers utiles pendant la partie.</p></div></div>
-    <div class="grid grid-3">
-        <a class="card card-link card-body" href="{{ route('gm.world.index') }}"><span class="eyebrow">Exploration</span><h3 class="display" style="font-size:1.3rem;margin:.45rem 0">Révéler une zone</h3><p class="muted small">Carte, lieu ou personnage, pour un joueur ou toute la table.</p></a>
-        @if($players->isNotEmpty())
-            <a class="card card-link card-body" href="{{ route('gm.characters.show', $players->first()->character) }}"><span class="eyebrow">Intervention</span><h3 class="display" style="font-size:1.3rem;margin:.45rem 0">Modifier une fiche</h3><p class="muted small">PV, états, caractéristiques, compétences et inventaire.</p></a>
-        @else
-            <div class="card card-body"><span class="eyebrow">Intervention</span><h3 class="display" style="font-size:1.3rem;margin:.45rem 0">En attente des joueurs</h3><p class="muted small">Les fiches apparaîtront ici après leur inscription.</p></div>
-        @endif
-        <div class="card card-body"><span class="eyebrow">État du groupe</span><h3 class="display" style="font-size:1.3rem;margin:.45rem 0">{{ $players->sum(fn($player) => $player->character->health) }} PV cumulés</h3><p class="muted small">{{ $players->where(fn($player) => $player->character->healthPercentage() < 35)->count() }} aventurier(s) en situation critique.</p></div>
+    <div class="section-title">
+        <div><h2>Extraction de séance</h2><p>Créez un instantané JSON de la fiche et des connaissances des joueurs sélectionnés.</p></div>
+        <span class="badge badge-gold">Prêt pour l’IA</span>
     </div>
+    <form class="card" method="POST" action="{{ route('gm.session-extractions.store') }}">
+        @csrf
+        <div class="card-body stack">
+            @if($players->isNotEmpty())
+                <div class="session-player-selector">
+                    @foreach($players as $player)
+                        <label class="session-player-option">
+                            <input type="checkbox" name="user_ids[]" value="{{ $player->id }}" @checked(in_array($player->id, old('user_ids', $players->pluck('id')->all())))>
+                            <span class="avatar">
+                                @if($player->character->portrait_path)<img src="{{ $player->character->portrait_path }}" alt="">@else{{ collect(explode(' ', $player->character->displayName()))->map(fn($part) => mb_substr($part,0,1))->take(2)->implode('') }}@endif
+                            </span>
+                            <span><strong>{{ $player->character->displayName() }}</strong><br><span class="small muted">{{ $player->name }}</span></span>
+                        </label>
+                    @endforeach
+                </div>
+                <div class="actions extraction-actions">
+                    <p class="small muted">Inclut fiche, caractéristiques, compétences connues, inventaire visible, notes, glossaire personnel, monde découvert et messages secrets conservés.</p>
+                    <button class="btn btn-primary" type="submit">Télécharger l’extraction JSON</button>
+                </div>
+            @else
+                <div class="empty">L’extraction sera disponible dès qu’un joueur aura rejoint la campagne.</div>
+            @endif
+        </div>
+    </form>
 </section>
 @endsection

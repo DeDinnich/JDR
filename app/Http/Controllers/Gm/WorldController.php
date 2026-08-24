@@ -17,7 +17,7 @@ class WorldController extends Controller
 {
     public function index(): View
     {
-        $maps = GameMap::query()->with('discoveredBy')->withCount('cellReveals')->orderBy('sort_order')->get();
+        $maps = GameMap::query()->with('discoveredBy')->orderBy('sort_order')->get();
         $players = User::query()->where('role', UserRole::Player->value)->orderBy('name')->get();
 
         return view('gm.world.index', compact('maps', 'players'));

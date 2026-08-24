@@ -37,24 +37,15 @@
     <div class="section-title"><div><h2>Cartes</h2><p>{{ $maps->count() }} carte(s) préparée(s).</p></div></div>
     <div class="grid grid-3">
         @forelse($maps as $map)
-            <article class="card card-body">
-                <div class="actions" style="justify-content:space-between">
-                    <div>
-                        <span class="eyebrow">{{ $map->discoveredBy->count() }} joueur(s) l’ont</span>
-                        <h3 class="display" style="font-size:1.4rem;margin:.35rem 0">{{ $map->title }}</h3>
+            <a class="card card-link map-preview-card" href="{{ route('gm.maps.grid', $map) }}">
+                <img class="map-card-image" src="{{ $map->hasGrid() ? route('maps.preview', $map) : '/images/maps/royaumes-oublies.svg' }}" alt="Aperçu complet de {{ $map->title }}" loading="lazy">
+                <div class="card-body">
+                    <div class="actions" style="justify-content:space-between">
+                        <div><span class="eyebrow">{{ $map->discoveredBy->count() }} joueur(s) l’ont</span><h3 class="display">{{ $map->title }}</h3></div>
+                        @if($map->is_active)<span class="badge badge-green">Active</span>@endif
                     </div>
-                    @if($map->is_active)<span class="badge badge-green">Active</span>@endif
                 </div>
-
-                <p class="muted small">{{ $map->description ?: 'Aucune description.' }}</p>
-
-                <div class="actions">
-                    <span class="badge">{{ $map->grid_columns }} × {{ $map->grid_rows }} cases</span>
-                    <span class="badge badge-gold">{{ $map->cell_reveals_count }} ouverte(s)</span>
-                </div>
-
-                <a class="btn btn-primary btn-sm" href="{{ route('gm.maps.grid', $map) }}">Ouvrir le quadrillage</a>
-            </article>
+            </a>
         @empty
             <div class="card empty span-2">Aucune carte préparée. Importe une image pour commencer.</div>
         @endforelse

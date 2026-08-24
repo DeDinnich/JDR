@@ -199,6 +199,22 @@ it('empêche de supprimer le repère d’un autre', function () {
     expect(MapPoint::query()->whereKey($point->id)->exists())->toBeTrue();
 });
 
+it('laisse un joueur supprimer son propre repère', function () {
+    $map = createSlicedMap($this->gm);
+    $map->discoveredBy()->attach($this->player->id, ['discovered_at' => now()]);
+    $point = $map->points()->create([
+        'user_id' => $this->player->id,
+        'label' => 'Passage secret',
+        'x_position' => 25,
+        'y_position' => 60,
+    ]);
+
+    actingAs($this->player)->deleteJson(route('maps.points.destroy', [$map, $point]))
+        ->assertOk()->assertJson(['deleted' => true]);
+
+    expect($point->fresh())->toBeNull();
+});
+
 /** Crée une carte réellement découpée, comme le ferait l'import. */
 function createSlicedMap(User $gm): GameMap
 {

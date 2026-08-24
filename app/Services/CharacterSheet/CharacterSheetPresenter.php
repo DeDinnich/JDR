@@ -126,6 +126,7 @@ class CharacterSheetPresenter
     private function identity(Character $character): array
     {
         return [
+            'id' => $character->id,
             'name' => $character->displayName(),
             'first_name' => $character->first_name,
             'last_name' => $character->last_name,
@@ -149,18 +150,22 @@ class CharacterSheetPresenter
     }
 
     /** @return array<string, mixed> */
-    private function resources(Character $character): array
+    public function resources(Character $character): array
     {
         $manaMax = $this->formulas->manaMax($character);
+        $health = min($character->health, $character->max_health);
+        $mana = min($character->mana_current, $manaMax);
 
         return [
-            'health' => $character->health,
+            'health' => $health,
             'max_health' => $character->max_health,
-            'health_percentage' => $character->healthPercentage(),
-            'mana' => $character->mana_current,
+            'health_percentage' => $character->max_health > 0
+                ? min(100, (int) round(($health / $character->max_health) * 100))
+                : 0,
+            'mana' => $mana,
             'mana_max' => $manaMax,
             'mana_percentage' => $manaMax > 0
-                ? min(100, (int) round(($character->mana_current / $manaMax) * 100))
+                ? min(100, (int) round(($mana / $manaMax) * 100))
                 : 0,
             'armor' => $character->armor,
             'gold' => $character->gold,
@@ -234,7 +239,9 @@ class CharacterSheetPresenter
                     // du service plutôt que de soustraire le bonus, car la
                     // valeur finale est bornée à 0–100.
                     'base_value' => $this->formulas->skillBaseValue($skill, $attributeValues),
-                    'bonus' => $skill->bonus,
+                    'gm_bonus' => $skill->bonus,
+                    'player_bonus' => $skill->player_bonus,
+                    'bonus' => $skill->bonus + $skill->player_bonus,
                     'value' => $value,
                     'display' => $value.' %',
                 ];

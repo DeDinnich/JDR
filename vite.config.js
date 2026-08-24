@@ -11,6 +11,7 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
+        port: Number(process.env.VITE_PORT ?? 5173),
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

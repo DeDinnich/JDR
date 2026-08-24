@@ -172,6 +172,20 @@ it('isole les notes personnelles de chaque joueur', function () {
     expect($this->cassian->fresh()->description)->not->toContain('ment');
 });
 
+it('enregistre les notes envoyées par l’éditeur du glossaire en JSON', function () {
+    $this->cassian->discoveredBy()->attach($this->alice->id, ['discovered_at' => now()]);
+
+    actingAs($this->alice)->putJson(route('player.glossary.notes', $this->cassian), [
+        'relationship' => 'allie',
+        'personal_notes' => '<p><strong>Fiable</strong>, malgré son silence.</p>',
+    ])->assertOk()->assertJsonStructure(['saved_at']);
+
+    $pivot = $this->alice->discoveredNpcs()->whereKey($this->cassian->id)->firstOrFail()->pivot;
+
+    expect($pivot->relationship)->toBe('allie')
+        ->and($pivot->personal_notes)->toContain('<strong>Fiable</strong>');
+});
+
 // ── Import JSON ──────────────────────────────────────────────────────────
 
 it('refuse proprement un JSON invalide, sans erreur 500', function () {

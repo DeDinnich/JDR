@@ -161,12 +161,13 @@
             <h2>Créer un PNJ</h2>
             <label class="btn btn-ghost btn-sm" for="npc-create" title="Fermer">✕</label>
         </header>
-        <form method="POST" action="{{ route('gm.npcs.store') }}" class="card-body">
+        <form method="POST" action="{{ route('gm.npcs.store') }}" enctype="multipart/form-data" class="card-body">
             @csrf
             <div class="form-grid">
                 <div class="form-group"><label>Prénom</label><input class="input" name="first_name" required></div>
                 <div class="form-group"><label>Nom</label><input class="input" name="last_name"></div>
                 <div class="form-group"><label>Rôle</label><input class="input" name="role"></div>
+                <div class="form-group"><label>Portrait</label><input class="input" type="file" name="portrait" accept="image/jpeg,image/png,image/webp"></div>
                 <div class="form-group">
                     <label>Importance</label>
                     <select class="select" name="importance">

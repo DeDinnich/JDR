@@ -67,6 +67,16 @@ class User extends Authenticatable
         return $this->hasMany(SecretMessage::class, 'recipient_id');
     }
 
+    public function conversationsAsFirst(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'participant_one_id');
+    }
+
+    public function conversationsAsSecond(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'participant_two_id');
+    }
+
     public function isGameMaster(): bool
     {
         return $this->role === UserRole::GameMaster;

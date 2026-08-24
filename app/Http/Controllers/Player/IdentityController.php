@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Player\UpdateIdentityRequest;
 use App\Http\Requests\Player\UpdatePortraitRequest;
 use App\Models\Character;
+use App\Services\CharacterPortraitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Identité et portrait, tenus par le joueur lui-même.
@@ -32,48 +32,22 @@ class IdentityController extends Controller
      * Le fichier va sur le disque public — un portrait n'a rien de secret — et
      * l'ancien est supprimé au passage pour ne pas accumuler d'orphelins.
      */
-    public function updatePortrait(UpdatePortraitRequest $request): RedirectResponse
+    public function updatePortrait(UpdatePortraitRequest $request, CharacterPortraitService $portraits): RedirectResponse
     {
         $character = $this->character($request);
 
-        $path = $request->file('portrait')->store('portraits', 'public');
-
-        $this->forgetPreviousPortrait($character);
-
-        $character->update(['portrait_path' => Storage::disk('public')->url($path)]);
+        $portraits->replace($character, $request->file('portrait'));
 
         return back()->with('success', 'Ton portrait a été mis à jour.');
     }
 
-    public function destroyPortrait(Request $request): RedirectResponse
+    public function destroyPortrait(Request $request, CharacterPortraitService $portraits): RedirectResponse
     {
         $character = $this->character($request);
 
-        $this->forgetPreviousPortrait($character);
-        $character->update(['portrait_path' => null]);
+        $portraits->remove($character);
 
         return back()->with('success', 'Portrait retiré.');
-    }
-
-    /**
-     * Supprime le fichier du portrait précédent, s'il nous appartient.
-     *
-     * Le champ peut contenir une URL externe saisie par le MJ : on ne tente
-     * alors évidemment pas de supprimer quoi que ce soit sur le disque.
-     */
-    private function forgetPreviousPortrait(Character $character): void
-    {
-        $previous = $character->portrait_path;
-
-        if ($previous === null || ! str_contains($previous, '/storage/portraits/')) {
-            return;
-        }
-
-        $relative = 'portraits/'.basename($previous);
-
-        if (Storage::disk('public')->exists($relative)) {
-            Storage::disk('public')->delete($relative);
-        }
     }
 
     private function character(Request $request): Character

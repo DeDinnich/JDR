@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Events\SecretMessageDeleted;
 use App\Events\SecretMessageSent;
 use App\Models\Npc;
 use App\Models\SecretMessage;
@@ -44,6 +45,39 @@ test('only the recipient can acknowledge a private message', function () {
     $this->actingAs($this->recipient)->postJson(route('messages.read', $message))->assertOk();
 
     expect($message->fresh()->read_at)->not->toBeNull();
+});
+
+test('the sender and recipient can delete a private message for both sides', function () {
+    Event::fake([SecretMessageDeleted::class]);
+    $message = SecretMessage::create([
+        'sender_id' => $this->gameMaster->id,
+        'recipient_id' => $this->recipient->id,
+        'body' => 'Message à corriger',
+    ]);
+
+    $this->actingAs($this->otherPlayer)
+        ->deleteJson(route('messages.destroy', $message))
+        ->assertForbidden();
+
+    $this->actingAs($this->recipient)
+        ->deleteJson(route('messages.destroy', $message))
+        ->assertOk()
+        ->assertJsonPath('deleted', true);
+
+    $this->assertDatabaseMissing('secret_messages', ['id' => $message->id]);
+    Event::assertDispatched(SecretMessageDeleted::class, fn ($event) => $event->messageId === $message->id);
+
+    $sentMessage = SecretMessage::create([
+        'sender_id' => $this->gameMaster->id,
+        'recipient_id' => $this->recipient->id,
+        'body' => 'Second essai',
+    ]);
+
+    $this->actingAs($this->gameMaster)
+        ->deleteJson(route('messages.destroy', $sentMessage))
+        ->assertOk();
+
+    $this->assertDatabaseMissing('secret_messages', ['id' => $sentMessage->id]);
 });
 
 test('a npc can be revealed to the whole table', function () {

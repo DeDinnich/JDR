@@ -26,7 +26,10 @@ class NpcPresenter
      */
     public function forPlayer(Npc $npc, User $user): ?array
     {
-        $pivot = $npc->discoveredBy()->whereKey($user->getKey())->first()?->pivot;
+        $knownNpc = $npc->relationLoaded('discoveredBy')
+            ? $npc->discoveredBy->firstWhere('id', $user->getKey())
+            : $npc->discoveredBy()->whereKey($user->getKey())->first();
+        $pivot = $knownNpc?->pivot;
 
         if ($pivot === null) {
             return null;
@@ -56,7 +59,11 @@ class NpcPresenter
     {
         $npcs = Npc::query()
             ->whereHas('discoveredBy', fn ($query) => $query->whereKey($user->getKey()))
-            ->with('location')
+            ->with([
+                'location:id,name',
+                'discoveredBy' => fn ($query) => $query->whereKey($user->getKey()),
+                'informations.revealedTo' => fn ($query) => $query->whereKey($user->getKey()),
+            ])
             ->orderBy('name')
             ->get();
 
@@ -75,6 +82,20 @@ class NpcPresenter
      */
     private function revealedInformations(Npc $npc, User $user): array
     {
+        if ($npc->relationLoaded('informations')
+            && $npc->informations->every(fn ($information) => $information->relationLoaded('revealedTo'))) {
+            return $npc->informations
+                ->filter(fn ($information) => $information->revealedTo->contains('id', $user->getKey()))
+                ->map(fn ($information) => [
+                    'title' => $information->title,
+                    'content' => $information->content,
+                    'category' => $information->category,
+                    'category_label' => $information->categoryLabel(),
+                ])
+                ->values()
+                ->all();
+        }
+
         return $npc->informations()
             ->whereHas('revealedTo', fn ($query) => $query->whereKey($user->getKey()))
             ->get()

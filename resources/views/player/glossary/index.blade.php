@@ -16,10 +16,13 @@
 
 <div class="grid grid-3">
     @forelse($npcs as $npc)
-        <article class="card">
+        <article class="card glossary-card">
+            <div class="glossary-portrait">
+                @if($npc['portrait_path'])<img src="{{ $npc['portrait_path'] }}" alt="Portrait de {{ $npc['name'] }}">
+                @else<span>{{ $npc['initials'] }}</span>@endif
+            </div>
             <div class="card-body">
                 <div class="actions">
-                    <span class="brand-mark">{{ $npc['initials'] }}</span>
                     <div>
                         <strong>{{ $npc['name'] }}</strong>
                         @if($npc['relationship'])<div class="eyebrow">{{ $npc['relationship'] }}</div>@endif
@@ -32,7 +35,7 @@
                     <p class="metric-note">{{ count($npc['informations']) }} information(s) connue(s)</p>
                 @endif
 
-                <a class="btn btn-secondary btn-sm" href="{{ route('player.glossary.show', $npc['id']) }}">Ouvrir</a>
+                <a class="btn btn-secondary btn-sm" href="{{ route('player.glossary.show', $npc['id']) }}">Ouvrir la fiche</a>
             </div>
         </article>
     @empty

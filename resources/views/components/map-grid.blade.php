@@ -44,6 +44,7 @@
         <div class="map-points" data-map-points>
             @foreach($points as $point)
                 <span class="map-point" data-point-id="{{ $point->id }}"
+                      @if($point->user_id === auth()->id()) data-delete-url="{{ route('maps.points.destroy', [$map, $point]) }}" title="Cliquer pour supprimer ce repère" @endif
                       style="left:{{ $point->x_position }}%;top:{{ $point->y_position }}%;--point-color:{{ $point->color }}"
                       data-owner="{{ $point->user_id }}">
                     <span class="map-point-dot"></span>

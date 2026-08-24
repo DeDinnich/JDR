@@ -25,6 +25,32 @@
     </form>
 </div>
 
+<section class="card npc-portrait-editor">
+    <div class="npc-portrait-preview">
+        @if($npc->portrait_path)
+            <img src="{{ $npc->portrait_path }}" alt="Portrait de {{ $npc->fullName() }}">
+        @else
+            <span>{{ $npc->initials() }}</span>
+        @endif
+    </div>
+    <div class="card-body">
+        <div class="eyebrow">Portrait</div>
+        <h2>Visage de {{ $npc->fullName() }}</h2>
+        <p class="muted small">L’image est recadrée en carré, redimensionnée et convertie en WebP.</p>
+        <form method="POST" action="{{ route('gm.npcs.portrait.update', $npc) }}" enctype="multipart/form-data" class="gm-inline-form">
+            @csrf
+            <div class="form-group" style="flex:1;min-width:14rem"><label for="npc-portrait">JPEG, PNG ou WebP · 4 Mo max.</label><input class="input" id="npc-portrait" type="file" name="portrait" accept="image/jpeg,image/png,image/webp" required></div>
+            <button class="btn btn-primary btn-sm" type="submit">Mettre à jour</button>
+        </form>
+        @if($npc->portrait_path)
+            <form method="POST" action="{{ route('gm.npcs.portrait.destroy', $npc) }}" style="margin-top:.6rem">
+                @csrf @method('DELETE')
+                <button class="btn btn-ghost btn-sm" type="submit">Retirer le portrait</button>
+            </form>
+        @endif
+    </div>
+</section>
+
 {{-- ── Révélation ─────────────────────────────────────────────────────── --}}
 <section class="card">
     <header class="card-header">
@@ -51,7 +77,7 @@
 {{-- ── Identité ───────────────────────────────────────────────────────── --}}
 <section class="card section">
     <header class="card-header"><h2>Identité</h2></header>
-    <form method="POST" action="{{ route('gm.npcs.detail.update', $npc) }}" class="card-body">
+    <form method="POST" action="{{ route('gm.npcs.detail.update', $npc) }}" enctype="multipart/form-data" class="card-body">
         @csrf @method('PUT')
         <div class="form-grid">
             <div class="form-group"><label>Prénom</label><input class="input" name="first_name" value="{{ old('first_name', $npc->first_name ?: $npc->name) }}" required></div>
@@ -63,7 +89,8 @@
             <div class="form-group"><label>Race</label><input class="input" name="race" value="{{ old('race', $npc->race) }}"></div>
             <div class="form-group"><label>Profession</label><input class="input" name="profession" value="{{ old('profession', $npc->profession) }}"></div>
             <div class="form-group"><label>Rôle</label><input class="input" name="role" value="{{ old('role', $npc->role) }}"></div>
-            <div class="form-group"><label>Portrait (URL)</label><input class="input" name="portrait_path" value="{{ old('portrait_path', $npc->portrait_path) }}"></div>
+            <div class="form-group"><label>Nouveau portrait</label><input class="input" type="file" name="portrait" accept="image/jpeg,image/png,image/webp"></div>
+            <input type="hidden" name="portrait_path" value="{{ $npc->portrait_path }}">
 
             <div class="form-group">
                 <label>Maison</label>

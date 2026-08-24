@@ -32,6 +32,7 @@ class SecretMessageSent implements ShouldBroadcastNow
             'body' => $this->message->body,
             'priority' => $this->message->priority,
             'sent_at' => $this->message->created_at->toIso8601String(),
+            'delete_url' => route('messages.destroy', $this->message),
         ];
     }
 }

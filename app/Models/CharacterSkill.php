@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * StatFormulaService à partir des caractéristiques et du bonus personnel, pour
  * qu'un changement de formule s'applique immédiatement à toutes les fiches.
  */
-#[Fillable(['character_id', 'skill_definition_id', 'bonus', 'reveal_state', 'gm_notes'])]
+#[Fillable(['character_id', 'skill_definition_id', 'bonus', 'player_bonus', 'reveal_state', 'gm_notes'])]
 class CharacterSkill extends Model implements RevealableSheetEntry
 {
     use Revealable;
@@ -42,6 +42,7 @@ class CharacterSkill extends Model implements RevealableSheetEntry
     {
         return [
             'bonus' => 'integer',
+            'player_bonus' => 'integer',
             'reveal_state' => RevealState::class,
         ];
     }

@@ -43,16 +43,7 @@
             <span>{{ $identity['status'] }}</span>
         </p>
 
-        <div class="resource-bars">
-            <div class="resource">
-                <div class="resource-label"><span class="eyebrow">Points de vie</span><span class="resource-value">{{ $resources['health'] }} / {{ $resources['max_health'] }}</span></div>
-                <div class="gauge gauge-health"><span style="width:{{ $resources['health_percentage'] }}%"></span></div>
-            </div>
-            <div class="resource">
-                <div class="resource-label"><span class="eyebrow">Mana</span><span class="resource-value">{{ $resources['mana'] }} / {{ $resources['mana_max'] }}</span></div>
-                <div class="gauge gauge-mana"><span style="width:{{ $resources['mana_percentage'] }}%"></span></div>
-            </div>
-        </div>
+        <x-sheet.resource-sliders :resources="$resources" :character-id="$character->id" />
 
         <div class="actions" style="margin-top:.9rem">
             @foreach($sheet['states'] as $state)
@@ -67,25 +58,39 @@
     </div>
 </section>
 
-<div>
-    <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-identity" checked>
-    <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-stats">
+<div class="gm-character-sheet">
+    <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-stats" checked>
     <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-skills">
     <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-masteries">
     <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-abilities">
+    <input class="sheet-tabs" type="radio" name="gm-tab" id="gmtab-identity">
 
     <nav class="tab-bar" aria-label="Sections de la fiche">
-        <label for="gmtab-identity">Identité &amp; ressources</label>
         <label for="gmtab-stats">Caractéristiques</label>
         <label for="gmtab-skills">Compétences</label>
         <label for="gmtab-masteries">Maîtrises &amp; affinités</label>
         <label for="gmtab-abilities">Capacités &amp; états</label>
+        <label for="gmtab-identity">Identité &amp; ressources</label>
     </nav>
 
     <div class="sheet-panels">
 
         {{-- ── Identité & ressources ───────────────────────────────────── --}}
         <section class="sheet-panel">
+            <section class="card" style="margin-bottom:1rem">
+                <header class="card-header"><div><h2>Portrait du personnage</h2><p class="muted small" style="margin:.2rem 0 0">JPEG, PNG ou WebP — 4 Mo maximum.</p></div></header>
+                <form method="POST" action="{{ route('gm.characters.portrait.update', $character) }}" enctype="multipart/form-data" class="card-body gm-inline-form">
+                    @csrf
+                    <div class="form-group" style="flex:1;min-width:14rem"><label for="character-portrait">Fichier</label><input class="input" id="character-portrait" type="file" name="portrait" accept="image/jpeg,image/png,image/webp" required></div>
+                    <button class="btn btn-secondary btn-sm" type="submit">Mettre à jour</button>
+                </form>
+                @if($identity['portrait_path'])
+                    <form method="POST" action="{{ route('gm.characters.portrait.destroy', $character) }}" class="card-body" style="padding-top:0">
+                        @csrf @method('DELETE')
+                        <button class="btn btn-ghost btn-sm" type="submit">Retirer le portrait</button>
+                    </form>
+                @endif
+            </section>
             <section class="card">
                 <header class="card-header">
                     <div><h2>Identité et ressources</h2><p class="muted small" style="margin:.2rem 0 0">Un personnage peut n’avoir ni classe ni profession : tout est facultatif.</p></div>
@@ -144,31 +149,12 @@
         {{-- ── Caractéristiques ────────────────────────────────────────── --}}
         <section class="sheet-panel">
             <div class="section-title">
-                <div><h2>Caractéristiques</h2><p>Valeur réelle, XP accumulée, prédisposition naturelle et ce que le joueur en sait.</p></div>
+                <div><h2>Caractéristiques</h2><p>Valeurs principales et modificateurs appliqués au personnage.</p></div>
             </div>
 
-            <div class="grid grid-3">
+            <div class="stat-grid">
                 @foreach($sheet['attributes'] as $attribute)
-                    <section class="card gm-stat-card">
-                        <div class="gm-stat-head">
-                            <div>
-                                <span class="eyebrow">{{ $attribute['abbreviation'] }} · {{ $attribute['name'] }}</span>
-                                <div><strong>{{ $attribute['value'] }}</strong>
-                                    @if($attribute['modifier'] !== 0)<span class="gold small">{{ $attribute['modifier'] > 0 ? '+' : '' }}{{ $attribute['modifier'] }}</span>@endif
-                                </div>
-                            </div>
-                            <span class="badge">Visible du joueur</span>
-                        </div>
-
-                        <form method="POST" action="{{ route('gm.attributes.update', [$character, $attribute['id']]) }}" style="margin-top:.6rem">
-                            @csrf @method('PUT')
-                            <div class="gm-inline-form">
-                                <div class="form-group"><label>Valeur</label><input class="input input-xs" type="number" name="value" value="{{ $attribute['value'] }}" required></div>
-                                <div class="form-group"><label>Modif.</label><input class="input input-xs" type="number" name="modifier" value="{{ $attribute['modifier'] }}" required></div>
-                                <button class="btn btn-secondary btn-sm" type="submit">OK</button>
-                            </div>
-                        </form>
-                    </section>
+                    <x-sheet.attribute-card :attribute="$attribute" :editable="true" :character-id="$character->id" />
                 @endforeach
             </div>
         </section>
@@ -182,33 +168,9 @@
             @foreach($sheet['skills'] as $category => $skills)
                 <div class="skill-group">
                     <div class="skill-group-title"><span class="eyebrow">{{ $category }}</span></div>
-                    <div class="stack">
+                    <div class="skill-list">
                         @foreach($skills as $skill)
-                            <div class="card card-body" style="padding:.75rem .9rem">
-                                <div class="actions" style="justify-content:space-between">
-                                    <div>
-                                        <strong>{{ $skill['name'] }}</strong>
-                                        <span class="skill-attrs">{{ $skill['attributes'] }}</span>
-                                    </div>
-                                    <div class="actions">
-                                        <span class="skill-score">{{ $skill['value'] }}</span>
-                                        @include('components.sheet.reveal-switch', ['type' => 'skill', 'id' => $skill['id'], 'current' => $skill['reveal_state']])
-                                    </div>
-                                </div>
-
-                                <details class="details-form" style="margin-top:.4rem">
-                                    <summary><span class="small gold">Bonus et note</span></summary>
-                                    <form method="POST" action="{{ route('gm.skills.update', [$character, $skill['id']]) }}" style="margin-top:.5rem">
-                                        @csrf @method('PUT')
-                                        <div class="gm-inline-form">
-                                            <div class="form-group"><label>Bonus</label><input class="input input-xs" type="number" name="bonus" value="{{ $skill['bonus'] }}" required></div>
-                                            <div class="form-group" style="flex:1;min-width:12rem"><label>Note MJ</label><input class="input" type="text" name="gm_notes" value="{{ $skill['gm_notes'] }}"></div>
-                                            <input type="hidden" name="reveal_state" value="{{ $skill['reveal_state'] }}">
-                                            <button class="btn btn-secondary btn-sm" type="submit">OK</button>
-                                        </div>
-                                    </form>
-                                </details>
-                            </div>
+                            @include('components.sheet.skill-row', ['skill' => $skill, 'editableBonus' => 'gm', 'characterId' => $character->id])
                         @endforeach
                     </div>
                 </div>
@@ -444,6 +406,37 @@
             </section>
         </section>
 
+    </div>
+</div>
+
+<div class="modal-overlay" data-attribute-modal role="dialog" aria-modal="true" aria-labelledby="attribute-modal-title">
+    <button class="modal-backdrop" type="button" data-attribute-close aria-label="Fermer"></button>
+    <div class="modal-panel card">
+        <header class="card-header"><div><div class="eyebrow">Caractéristique principale</div><h2 id="attribute-modal-title" data-attribute-name></h2></div><button class="btn btn-ghost btn-sm" type="button" data-attribute-close>✕</button></header>
+        <form class="card-body" data-attribute-form>
+            <div class="form-grid">
+                <div class="form-group"><label for="attribute-value">Valeur principale</label><input class="input" id="attribute-value" type="number" min="0" max="{{ config('jdr.character.attribute_max') }}" required data-attribute-value></div>
+                <div class="form-group"><label for="attribute-modifier">Modificateur</label><input class="input" id="attribute-modifier" type="number" min="-20" max="20" required data-attribute-modifier-input></div>
+            </div>
+            <div class="actions" style="justify-content:flex-end;margin-top:1rem"><span class="small muted" data-attribute-status></span><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay skill-bonus-modal" data-skill-modal role="dialog" aria-modal="true" aria-labelledby="skill-modal-title">
+    <button class="modal-backdrop" type="button" data-skill-close aria-label="Fermer"></button>
+    <div class="modal-panel card">
+        <header class="card-header"><div><div class="eyebrow">Gestion de la compétence</div><h2 id="skill-modal-title" data-skill-name></h2></div><button class="btn btn-ghost btn-sm" type="button" data-skill-close>✕</button></header>
+        <form class="card-body" data-skill-form>
+            <div class="skill-calculation"><span>Base <strong data-skill-base></strong></span><span>Bonus MJ <strong data-skill-gm></strong></span><span>Bonus joueur <strong data-skill-player-label></strong></span><span>Total <strong data-skill-total></strong></span></div>
+            <div class="form-grid">
+                <div class="form-group"><label for="gm-bonus">Bonus MJ</label><input class="input" id="gm-bonus" type="number" min="-50" max="50" required data-skill-gm-input></div>
+                <div class="form-group"><label for="gm-player-bonus">Bonus joueur</label><input class="input" id="gm-player-bonus" type="number" min="-50" max="50" required data-skill-player></div>
+                <div class="form-group"><label for="gm-skill-state">Visibilité</label><select class="select" id="gm-skill-state" data-skill-reveal><option value="hidden">Cachée</option><option value="revealed">Révélée</option></select></div>
+                <div class="form-group full"><label for="gm-skill-notes">Note MJ</label><textarea class="textarea" id="gm-skill-notes" rows="3" maxlength="2000" data-skill-notes></textarea></div>
+            </div>
+            <div class="actions" style="justify-content:flex-end;margin-top:1rem"><span class="small muted" data-skill-status></span><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+        </form>
     </div>
 </div>
 

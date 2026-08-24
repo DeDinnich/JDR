@@ -36,22 +36,7 @@
             @if($identity['occupation'])<span>{{ $identity['occupation'] }}</span>@endif
         </p>
 
-        <div class="resource-bars">
-            <div class="resource">
-                <div class="resource-label">
-                    <span class="eyebrow">Points de vie</span>
-                    <span class="resource-value">{{ $resources['health'] }} / {{ $resources['max_health'] }}</span>
-                </div>
-                <div class="gauge gauge-health"><span style="width:{{ $resources['health_percentage'] }}%"></span></div>
-            </div>
-            <div class="resource">
-                <div class="resource-label">
-                    <span class="eyebrow">Mana</span>
-                    <span class="resource-value">{{ $resources['mana'] }} / {{ $resources['mana_max'] }}</span>
-                </div>
-                <div class="gauge gauge-mana"><span style="width:{{ $resources['mana_percentage'] }}%"></span></div>
-            </div>
-        </div>
+        <x-sheet.resource-sliders :resources="$resources" :character-id="$identity['id']" />
 
         @if($sheet['states']->isNotEmpty())
             <div class="actions" style="margin-top:.9rem">
@@ -96,15 +81,7 @@
 
             <div class="stat-grid">
                 @foreach($sheet['attributes'] as $attribute)
-                    <div class="card stat-card"
-                         @if($attribute['description']) title="{{ $attribute['description'] }}" @endif>
-                        <span class="stat-abbr">{{ $attribute['abbreviation'] }}</span>
-                        <span class="stat-name">{{ $attribute['name'] }}</span>
-                        <span class="stat-value">{{ $attribute['display'] }}</span>
-                        @if($attribute['modifier'] !== 0)
-                            <span class="stat-sub">{{ $attribute['modifier'] > 0 ? '+' : '' }}{{ $attribute['modifier'] }} d’un état en cours</span>
-                        @endif
-                    </div>
+                    <x-sheet.attribute-card :attribute="$attribute" />
                 @endforeach
             </div>
 
@@ -121,7 +98,7 @@
                         <div class="skill-group-title"><span class="eyebrow">{{ $category }}</span></div>
                         <div class="skill-list">
                             @foreach($skills as $skill)
-                                @include('components.sheet.skill-row', ['skill' => $skill])
+                                @include('components.sheet.skill-row', ['skill' => $skill, 'editableBonus' => true])
                             @endforeach
                         </div>
                     </div>
@@ -131,14 +108,14 @@
             </div>
 
             @if($sheet['affinities']->isNotEmpty())
-                <section class="card section">
+                <a class="card section ally-card-link" href="{{ route('player.allies.show', $ally['id']) }}">
                     <header class="card-header"><h2>Affinités ressenties</h2><span class="badge badge-gold">Magie</span></header>
                     <div class="card-body">
                         @foreach($sheet['affinities'] as $affinity)
                             @include('components.sheet.affinity-row', ['affinity' => $affinity])
                         @endforeach
                     </div>
-                </section>
+                </a>
             @endif
         </section>
 
@@ -343,6 +320,19 @@
                 <div class="card empty">Tu es seul à la table pour l’instant.</div>
             @endforelse
         </section>
+    </div>
+</div>
+
+<div class="modal-overlay skill-bonus-modal" data-skill-modal role="dialog" aria-modal="true" aria-labelledby="skill-modal-title">
+    <button class="modal-backdrop" type="button" data-skill-close aria-label="Fermer"></button>
+    <div class="modal-panel card">
+        <header class="card-header"><div><div class="eyebrow">Ajustement personnel</div><h2 id="skill-modal-title" data-skill-name></h2></div><button class="btn btn-ghost btn-sm" type="button" data-skill-close>✕</button></header>
+        <form class="card-body" data-skill-form>
+            <p class="muted">La valeur de base est calculée depuis tes caractéristiques. Tu peux uniquement modifier ton bonus personnel.</p>
+            <div class="skill-calculation"><span>Base <strong data-skill-base></strong></span><span>Bonus MJ <strong data-skill-gm></strong></span><span>Mon bonus <strong data-skill-player-label></strong></span><span>Total <strong data-skill-total></strong></span></div>
+            <div class="form-group"><label for="player-bonus">Mon bonus</label><input class="input" id="player-bonus" type="number" min="-50" max="50" name="player_bonus" required data-skill-player></div>
+            <div class="actions" style="justify-content:flex-end;margin-top:1rem"><span class="small muted" data-skill-status></span><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+        </form>
     </div>
 </div>
 

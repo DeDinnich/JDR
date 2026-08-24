@@ -31,7 +31,9 @@ class StatFormulaService
      */
     public function skillValue(CharacterSkill $skill, array $attributeValues): int
     {
-        return $this->clampPercentage($this->skillBaseValue($skill, $attributeValues) + $skill->bonus);
+        return $this->clampPercentage(
+            $this->skillBaseValue($skill, $attributeValues) + $skill->bonus + $skill->player_bonus
+        );
     }
 
     /**

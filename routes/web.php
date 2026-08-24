@@ -3,18 +3,26 @@
 use App\Enums\UserRole;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\CharacterResourceController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Gm\CharacterController as GmCharacterController;
+use App\Http\Controllers\Gm\CharacterPortraitController as GmCharacterPortraitController;
 use App\Http\Controllers\Gm\DashboardController as GmDashboardController;
 use App\Http\Controllers\Gm\MapGridController;
 use App\Http\Controllers\Gm\NpcController as GmNpcController;
 use App\Http\Controllers\Gm\NpcImportController;
+use App\Http\Controllers\Gm\NpcPortraitController;
 use App\Http\Controllers\Gm\SecretMessageController as GmSecretMessageController;
+use App\Http\Controllers\Gm\SessionExtractionController;
 use App\Http\Controllers\Gm\WorldController as GmWorldController;
 use App\Http\Controllers\MapPointController;
+use App\Http\Controllers\MapPreviewController;
 use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\Player\AllyController;
 use App\Http\Controllers\Player\CharacterController as PlayerCharacterController;
 use App\Http\Controllers\Player\CharacterCreationController;
+use App\Http\Controllers\Player\CharacterSkillController as PlayerCharacterSkillController;
 use App\Http\Controllers\Player\GlossaryController;
 use App\Http\Controllers\Player\IdentityController;
 use App\Http\Controllers\Player\InventoryController as PlayerInventoryController;
@@ -43,11 +51,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/deconnexion', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/messages/non-lus', [SecretMessageController::class, 'unread'])->name('messages.unread');
     Route::post('/messages/{secretMessage}/lecture', [SecretMessageController::class, 'read'])->name('messages.read');
+    Route::delete('/messages/{secretMessage}', [SecretMessageController::class, 'destroy'])->name('messages.destroy');
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat/non-lus/compteur', [ChatController::class, 'unread'])->name('chat.unread');
+    Route::get('/chat/{conversation}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat/{conversation}/messages', [ChatController::class, 'store'])
+        ->middleware('throttle:60,1')->name('chat.messages.store');
+    Route::post('/chat/{conversation}/lecture', [ChatController::class, 'read'])->name('chat.read');
+    Route::put('/personnages/{character}/ressources', [CharacterResourceController::class, 'update'])
+        ->name('characters.resources.update');
 
     // Tuiles de carte : la seule voie d'accès aux images découpées. Le
     // contrôleur vérifie que la case est ouverte pour le demandeur.
     Route::get('/cartes/{map}/tuiles/{row}/{column}', MapTileController::class)
         ->whereNumber(['row', 'column'])->name('maps.tile');
+    Route::get('/cartes/{map}/apercu', MapPreviewController::class)->name('maps.preview');
     Route::post('/cartes/{map}/reperes', [MapPointController::class, 'store'])->name('maps.points.store');
     Route::delete('/cartes/{map}/reperes/{point}', [MapPointController::class, 'destroy'])->name('maps.points.destroy');
 
@@ -57,6 +75,9 @@ Route::middleware('auth')->group(function () {
         // La fiche est la page d'accueil du joueur : la vue d'ensemble faisait
         // doublon avec elle et a été retirée.
         Route::get('/', PlayerCharacterController::class)->name('character');
+        Route::get('/compagnons/{character}', [AllyController::class, 'show'])->name('allies.show');
+        Route::put('/competences/{skill}/bonus', [PlayerCharacterSkillController::class, 'update'])
+            ->name('skills.bonus.update');
 
         // Naissance du personnage : accessible tant que le joueur n'a pas
         // d'enfant complet (identité + origine).
@@ -97,6 +118,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [GmCharacterController::class, 'show'])->name('characters.show');
             Route::put('/', [GmCharacterController::class, 'update'])->name('characters.update');
             Route::post('/synchroniser', [GmCharacterController::class, 'synchronise'])->name('characters.synchronise');
+            Route::post('/portrait', [GmCharacterPortraitController::class, 'update'])->name('characters.portrait.update');
+            Route::delete('/portrait', [GmCharacterPortraitController::class, 'destroy'])->name('characters.portrait.destroy');
 
             Route::put('/caracteristiques/{attribute}', [GmCharacterController::class, 'updateAttribute'])->name('attributes.update');
             Route::post('/revelations', [GmCharacterController::class, 'reveal'])->name('reveal.store');
@@ -123,6 +146,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::post('/messages', [GmSecretMessageController::class, 'store'])->name('messages.store');
+        Route::post('/extractions/session', SessionExtractionController::class)->name('session-extractions.store');
 
         // Journal du MJ : même écran que celui des joueurs, notes privées.
         Route::get('/journal', [NoteController::class, 'index'])->name('notes.index');
@@ -144,6 +168,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [GmNpcController::class, 'show'])->name('npcs.detail');
             Route::put('/', [GmNpcController::class, 'update'])->name('npcs.detail.update');
             Route::delete('/', [GmNpcController::class, 'destroy'])->name('npcs.destroy');
+            Route::post('/portrait', [NpcPortraitController::class, 'update'])->name('npcs.portrait.update');
+            Route::delete('/portrait', [NpcPortraitController::class, 'destroy'])->name('npcs.portrait.destroy');
             Route::get('/exporter', [GmNpcController::class, 'export'])->name('npcs.export.one');
 
             Route::post('/secrets', [GmNpcController::class, 'storeSecret'])->name('npcs.secrets.store');

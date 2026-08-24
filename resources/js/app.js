@@ -11,7 +11,9 @@ if (userId && import.meta.env.VITE_REVERB_APP_KEY) {
     window.Echo = new Echo({
         broadcaster: 'reverb',
         key: import.meta.env.VITE_REVERB_APP_KEY,
-        wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
+        // Le navigateur reprend l'hôte par lequel le joueur a ouvert le site :
+        // localhost sur le poste MJ, IP LAN sur téléphone, domaine en prod.
+        wsHost: window.location.hostname,
         wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 80),
         wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
@@ -44,6 +46,31 @@ function enqueueMessage(message) {
     showNextMessage();
 }
 
+function removeSecretMessage(messageId) {
+    const normalizedId = String(messageId);
+
+    for (let index = messageQueue.length - 1; index >= 0; index -= 1) {
+        if (String(messageQueue[index].id) === normalizedId) messageQueue.splice(index, 1);
+    }
+
+    if (activeMessage && String(activeMessage.id) === normalizedId) {
+        overlay?.classList.remove('visible');
+        activeMessage = null;
+        window.setTimeout(showNextMessage, 250);
+    }
+
+    document.querySelector(`[data-secret-message-row="${CSS.escape(normalizedId)}"]`)?.remove();
+}
+
+async function deleteSecretMessage(url) {
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'},
+    });
+
+    if (!response.ok) throw new Error(`Suppression refusée (${response.status}).`);
+}
+
 overlay?.querySelector('[data-secret-dismiss]')?.addEventListener('click', async () => {
     if (!activeMessage) return;
     const messageId = activeMessage.id;
@@ -59,6 +86,43 @@ overlay?.querySelector('[data-secret-dismiss]')?.addEventListener('click', async
     } catch (error) {
         console.error('Impossible d’accuser réception du message.', error);
     }
+});
+
+overlay?.querySelector('[data-secret-delete]')?.addEventListener('click', async (event) => {
+    if (!activeMessage || !window.confirm('Supprimer définitivement ce message des deux côtés ?')) return;
+
+    const button = event.currentTarget;
+    button.disabled = true;
+
+    try {
+        const messageId = activeMessage.id;
+        await deleteSecretMessage(activeMessage.delete_url ?? `/messages/${messageId}`);
+        removeSecretMessage(messageId);
+    } catch (error) {
+        console.error('Impossible de supprimer le message.', error);
+    } finally {
+        button.disabled = false;
+    }
+});
+
+document.querySelectorAll('[data-secret-message-delete-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!window.confirm('Supprimer définitivement ce message des deux côtés ?')) return;
+
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+
+        try {
+            const row = form.closest('[data-secret-message-row]');
+            await deleteSecretMessage(form.action);
+            if (row) removeSecretMessage(row.dataset.secretMessageRow);
+        } catch (error) {
+            console.error('Impossible de supprimer le message.', error);
+        } finally {
+            button.disabled = false;
+        }
+    });
 });
 
 async function fetchUnreadMessages() {
@@ -110,19 +174,354 @@ revealOverlay?.querySelector('[data-reveal-dismiss]')?.addEventListener('click',
 if (window.Echo && userRole === 'player') {
     window.Echo.private(`users.${userId}`)
         .listen('.secret-message.sent', enqueueMessage)
+        .listen('.secret-message.deleted', (event) => removeSecretMessage(event.id))
         .listen('.character-sheet.revealed', showReveal)
         .listen('.npc.revealed', showReveal);
 }
 
 if (window.Echo && userRole === 'game_master') {
-    window.Echo.private('game-masters').listen('.secret-message.read', (event) => {
-        const status = document.querySelector(`[data-message-id="${event.id}"]`);
-        if (status) {
-            status.textContent = 'Lu';
-            status.className = 'badge badge-green';
+    window.Echo.private('game-masters')
+        .listen('.secret-message.read', (event) => {
+            const status = document.querySelector(`[data-message-id="${event.id}"]`);
+            if (status) {
+                status.textContent = 'Lu';
+                status.className = 'badge badge-green';
+            }
+        })
+        .listen('.secret-message.deleted', (event) => removeSecretMessage(event.id));
+}
+
+/*
+ * Chat privé : l'événement utilisateur alimente le compteur global tandis
+ * que le canal de conversation met à jour le fil actuellement ouvert.
+ * L'indicateur de frappe est un whisper : il n'est ni stocké ni diffusé à un
+ * utilisateur qui ne participe pas à la conversation.
+ */
+let globalUnreadCount = 0;
+const globalChatBadge = document.querySelector('[data-global-chat-unread]');
+
+function renderGlobalUnread(value) {
+    globalUnreadCount = Math.max(0, Number(value) || 0);
+    if (!globalChatBadge) return;
+    globalChatBadge.textContent = globalUnreadCount;
+    globalChatBadge.classList.toggle('is-hidden', globalUnreadCount === 0);
+}
+
+if (window.Echo && userId) {
+    window.Echo.private(`users.${userId}`).listen('.chat-message.sent', (event) => {
+        const selectedConversation = document.querySelector('[data-chat]')?.dataset.conversationId;
+        if (String(event.conversation_id) !== String(selectedConversation)) {
+            renderGlobalUnread(globalUnreadCount + 1);
+            const contactBadge = document.querySelector(`[data-chat-unread="${event.conversation_id}"]`);
+            if (contactBadge) {
+                contactBadge.textContent = Number(contactBadge.textContent || 0) + 1;
+                contactBadge.classList.remove('is-hidden');
+            }
         }
     });
 }
+
+if (userId) {
+    fetch('/chat/non-lus/compteur', {headers: {'Accept': 'application/json'}})
+        .then((response) => response.ok ? response.json() : null)
+        .then((payload) => { if (payload) renderGlobalUnread(payload.count); })
+        .catch(() => null);
+}
+
+const chat = document.querySelector('[data-chat][data-conversation-id]');
+
+if (chat) {
+    const conversationId = chat.dataset.conversationId;
+    const list = chat.querySelector('[data-chat-messages]');
+    const form = chat.querySelector('[data-chat-form]');
+    const input = chat.querySelector('[data-chat-input]');
+    const typingIndicator = chat.querySelector('[data-typing-indicator]');
+    const seenMessageIds = new Set([...list.querySelectorAll('[data-message-id]')].map((item) => item.dataset.messageId));
+    let typingTimer = null;
+    let whisperTimer = null;
+
+    function scrollChat() {
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function appendChatMessage(message) {
+        if (seenMessageIds.has(String(message.id))) return;
+        seenMessageIds.add(String(message.id));
+
+        const article = document.createElement('article');
+        article.className = `chat-message${String(message.sender_id) === String(userId) ? ' is-mine' : ''}`;
+        article.dataset.messageId = message.id;
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        bubble.textContent = message.body;
+        const meta = document.createElement('span');
+        meta.textContent = `${String(message.sender_id) === String(userId) ? 'Vous' : message.sender_name} · ${message.sent_at_label}`;
+        article.append(bubble, meta);
+        list.appendChild(article);
+        scrollChat();
+    }
+
+    async function markConversationRead() {
+        await fetch(chat.dataset.readUrl, {
+            method: 'POST',
+            headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+        }).catch(() => null);
+        document.querySelector(`[data-chat-unread="${conversationId}"]`)?.classList.add('is-hidden');
+        renderGlobalUnread(Math.max(0, globalUnreadCount - 1));
+    }
+
+    const channel = window.Echo?.private(`conversations.${conversationId}`);
+    channel?.listen('.chat-message.sent', (message) => {
+        appendChatMessage(message);
+        if (String(message.sender_id) !== String(userId)) markConversationRead();
+    });
+    channel?.listenForWhisper('typing', (event) => {
+        typingIndicator.textContent = event.name ? `${event.name} écrit…` : '';
+        window.clearTimeout(typingTimer);
+        typingTimer = window.setTimeout(() => { typingIndicator.textContent = ''; }, 1500);
+    });
+
+    input?.addEventListener('input', () => {
+        window.clearTimeout(whisperTimer);
+        channel?.whisper('typing', {name: document.body.dataset.userName || 'Quelqu’un'});
+        whisperTimer = window.setTimeout(() => channel?.whisper('typing', {name: ''}), 1200);
+    });
+
+    form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const body = input.value.trim();
+        if (!body) return;
+        input.disabled = true;
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+                body: JSON.stringify({body}),
+            });
+            if (!response.ok) throw new Error(response.statusText);
+            appendChatMessage(await response.json());
+            input.value = '';
+        } catch (error) {
+            console.error('Message non envoyé.', error);
+        } finally {
+            input.disabled = false;
+            input.focus();
+        }
+    });
+
+    scrollChat();
+}
+
+/* Ressources de fiche : mise à jour optimiste, sauvegarde temporisée et
+ * synchronisation MJ/joueur sur le canal privé du personnage. */
+function renderResourcesPanel(panel, resources) {
+    const health = panel.querySelector('[data-resource="health"]');
+    const mana = panel.querySelector('[data-resource="mana_current"]');
+    if (health) {
+        health.max = resources.max_health;
+        health.value = resources.health;
+        panel.querySelector('[data-resource-value="health"]').textContent = `${resources.health} / ${resources.max_health}`;
+    }
+    if (mana) {
+        mana.max = Math.max(1, resources.mana_max);
+        mana.value = resources.mana;
+        mana.disabled = resources.mana_max === 0;
+        panel.querySelector('[data-resource-value="mana_current"]').textContent = `${resources.mana} / ${resources.mana_max}`;
+    }
+
+    const total = document.querySelector('[data-group-health-total]');
+    const critical = document.querySelector('[data-group-critical]');
+    if (total || critical) {
+        const healthRanges = [...document.querySelectorAll('[data-character-resources] [data-resource="health"]')];
+        if (total) total.textContent = healthRanges.reduce((sum, range) => sum + Number(range.value), 0);
+        if (critical) critical.textContent = healthRanges.filter((range) => Number(range.value) / Math.max(1, Number(range.max)) < .35).length;
+    }
+}
+
+document.querySelectorAll('[data-character-resources]').forEach((panel) => {
+    const characterId = panel.dataset.characterResources;
+    const status = panel.querySelector('[data-resource-status]');
+    const timers = new Map();
+
+    panel.querySelectorAll('[data-resource]').forEach((range) => {
+        range.addEventListener('input', () => {
+            const maximum = Number(range.max);
+            panel.querySelector(`[data-resource-value="${range.dataset.resource}"]`).textContent = `${range.value} / ${maximum}`;
+            status.textContent = 'Modification…';
+            window.clearTimeout(timers.get(range.dataset.resource));
+            timers.set(range.dataset.resource, window.setTimeout(async () => {
+                try {
+                    const response = await fetch(panel.dataset.resourceUrl, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+                        body: JSON.stringify({resource: range.dataset.resource, value: Number(range.value)}),
+                    });
+                    if (!response.ok) throw new Error(response.statusText);
+                    renderResourcesPanel(panel, await response.json());
+                    status.textContent = 'Enregistré';
+                } catch (error) {
+                    status.textContent = 'Échec de l’enregistrement';
+                    console.error('Ressource non enregistrée.', error);
+                }
+            }, 180));
+        });
+    });
+
+    window.Echo?.private(`characters.${characterId}`)
+        .listen('.character-resources.updated', (resources) => renderResourcesPanel(panel, resources))
+        .listen('.character-skill.updated', updateSkillRow)
+        .listen('.character-sheet.updated', (sheet) => applySheetUpdate(sheet));
+});
+
+/* Modale de bonus de compétence côté joueur. */
+const skillModal = document.querySelector('[data-skill-modal]');
+let activeSkillButton = null;
+
+function signed(value) {
+    const numeric = Number(value);
+    return numeric > 0 ? `+${numeric}` : String(numeric);
+}
+
+function updateSkillRow(skill) {
+    const row = document.querySelector(`[data-skill-id="${skill.id}"]`);
+    if (!row) return;
+    const display = row.querySelector('[data-skill-display]');
+    if (display) display.textContent = skill.display;
+    const breakdown = row.querySelector('[data-skill-breakdown]');
+    if (breakdown) {
+        const sign = skill.bonus >= 0 ? '+' : '−';
+        breakdown.textContent = `(${skill.base_value} ${sign} ${Math.abs(skill.bonus)})`;
+    }
+    const opener = row.querySelector('[data-skill-open]');
+    if (opener) {
+        opener.dataset.base = skill.base_value;
+        opener.dataset.gmBonus = skill.gm_bonus;
+        opener.dataset.playerBonus = skill.player_bonus;
+        if (skill.gm_notes !== undefined) opener.dataset.gmNotes = skill.gm_notes || '';
+        if (skill.reveal_state !== undefined) opener.dataset.revealState = skill.reveal_state;
+    }
+}
+
+function updateAttributeCard(attribute) {
+    const card = document.querySelector(`[data-attribute-id="${attribute.id}"]`);
+    if (!card) return;
+    card.querySelector('.stat-value').textContent = attribute.display;
+    const modifier = card.querySelector('[data-attribute-modifier]');
+    if (modifier) modifier.textContent = attribute.modifier === 0 ? '' : `${attribute.modifier > 0 ? '+' : ''}${attribute.modifier} de modificateur`;
+    const opener = card.querySelector('[data-attribute-open]');
+    if (opener) {
+        opener.dataset.value = attribute.value;
+        opener.dataset.modifier = attribute.modifier;
+    }
+}
+
+function applySheetUpdate(sheet) {
+    sheet.attributes?.forEach(updateAttributeCard);
+    sheet.skills?.forEach(updateSkillRow);
+    if (sheet.resources) {
+        document.querySelectorAll(`[data-character-resources="${sheet.character_id}"]`)
+            .forEach((panel) => renderResourcesPanel(panel, sheet.resources));
+    }
+}
+
+function renderSkillModal() {
+    if (!skillModal || !activeSkillButton) return;
+    const base = Number(activeSkillButton.dataset.base);
+    const gmInput = skillModal.querySelector('[data-skill-gm-input]');
+    const gm = Number(gmInput ? gmInput.value : activeSkillButton.dataset.gmBonus);
+    const player = Number(skillModal.querySelector('[data-skill-player]').value);
+    skillModal.querySelector('[data-skill-base]').textContent = base;
+    skillModal.querySelector('[data-skill-gm]').textContent = signed(gm);
+    skillModal.querySelector('[data-skill-player-label]').textContent = signed(player);
+    skillModal.querySelector('[data-skill-total]').textContent = `${Math.max(0, Math.min(100, base + gm + player))} %`;
+}
+
+document.querySelectorAll('[data-skill-open]').forEach((button) => button.addEventListener('click', () => {
+    activeSkillButton = button;
+    skillModal.querySelector('[data-skill-name]').textContent = button.dataset.name;
+    skillModal.querySelector('[data-skill-player]').value = button.dataset.playerBonus;
+    const gmInput = skillModal.querySelector('[data-skill-gm-input]');
+    if (gmInput) gmInput.value = button.dataset.gmBonus;
+    const notes = skillModal.querySelector('[data-skill-notes]');
+    if (notes) notes.value = button.dataset.gmNotes || '';
+    const reveal = skillModal.querySelector('[data-skill-reveal]');
+    if (reveal) reveal.value = button.dataset.revealState || 'revealed';
+    skillModal.querySelector('[data-skill-status]').textContent = '';
+    renderSkillModal();
+    skillModal.classList.add('is-open');
+    skillModal.querySelector('[data-skill-player]').focus();
+}));
+
+skillModal?.querySelectorAll('[data-skill-close]').forEach((button) => button.addEventListener('click', () => skillModal.classList.remove('is-open')));
+skillModal?.querySelector('[data-skill-player]')?.addEventListener('input', renderSkillModal);
+skillModal?.querySelector('[data-skill-gm-input]')?.addEventListener('input', renderSkillModal);
+skillModal?.querySelector('[data-skill-form]')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const status = skillModal.querySelector('[data-skill-status]');
+    status.textContent = 'Enregistrement…';
+    try {
+        const payload = {player_bonus: Number(skillModal.querySelector('[data-skill-player]').value)};
+        const gmInput = skillModal.querySelector('[data-skill-gm-input]');
+        if (gmInput) {
+            payload.bonus = Number(gmInput.value);
+            payload.gm_notes = skillModal.querySelector('[data-skill-notes]').value;
+            payload.reveal_state = skillModal.querySelector('[data-skill-reveal]').value;
+        }
+        const response = await fetch(activeSkillButton.dataset.url, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(response.statusText);
+        const skill = await response.json();
+        updateSkillRow(skill);
+        status.textContent = 'Enregistré';
+        window.setTimeout(() => skillModal.classList.remove('is-open'), 300);
+    } catch (error) {
+        status.textContent = 'Échec de l’enregistrement';
+        console.error('Bonus non enregistré.', error);
+    }
+});
+
+/* Caractéristiques principales : édition MJ en modale, puis propagation de
+ * la fiche recalculée (compétences et mana compris) sur le canal du personnage. */
+const attributeModal = document.querySelector('[data-attribute-modal]');
+let activeAttributeButton = null;
+
+document.querySelectorAll('[data-attribute-open]').forEach((button) => button.addEventListener('click', () => {
+    activeAttributeButton = button;
+    attributeModal.querySelector('[data-attribute-name]').textContent = button.dataset.name;
+    attributeModal.querySelector('[data-attribute-value]').value = button.dataset.value;
+    attributeModal.querySelector('[data-attribute-modifier-input]').value = button.dataset.modifier;
+    attributeModal.querySelector('[data-attribute-status]').textContent = '';
+    attributeModal.classList.add('is-open');
+    attributeModal.querySelector('[data-attribute-value]').focus();
+}));
+
+attributeModal?.querySelectorAll('[data-attribute-close]').forEach((button) => button.addEventListener('click', () => attributeModal.classList.remove('is-open')));
+attributeModal?.querySelector('[data-attribute-form]')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const status = attributeModal.querySelector('[data-attribute-status]');
+    status.textContent = 'Enregistrement…';
+    try {
+        const response = await fetch(activeAttributeButton.dataset.url, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+            body: JSON.stringify({
+                value: Number(attributeModal.querySelector('[data-attribute-value]').value),
+                modifier: Number(attributeModal.querySelector('[data-attribute-modifier-input]').value),
+            }),
+        });
+        if (!response.ok) throw new Error(response.statusText);
+        applySheetUpdate(await response.json());
+        status.textContent = 'Enregistré';
+        window.setTimeout(() => attributeModal.classList.remove('is-open'), 300);
+    } catch (error) {
+        status.textContent = 'Échec de l’enregistrement';
+        console.error('Caractéristique non enregistrée.', error);
+    }
+});
 
 fetchUnreadMessages();
 if (userRole === 'player') window.setInterval(fetchUnreadMessages, 12000);
@@ -172,7 +571,9 @@ document.querySelectorAll('.note-editor').forEach((editor) => {
      * présents, plutôt que d'inventer des valeurs pour ceux qui manquent.
      */
     function payload() {
-        const body = {content: content.innerHTML};
+        const body = editor.querySelector('.note-relationship')
+            ? {personal_notes: content.innerHTML}
+            : {content: content.innerHTML};
 
         if (title) body.title = title.value || 'Sans titre';
         if (pinned) body.pinned = pinned.checked ? 1 : 0;
@@ -315,6 +716,7 @@ if (mapGrid) {
         });
 
         mapGrid.addEventListener('click', async (event) => {
+            if (event.target.closest('.map-point')) return;
             // Côté MJ le clic simple sert à ouvrir une case : on réserve donc
             // Maj + clic à la pose de repère.
             const wantsPoint = placing || (cellUrl && event.shiftKey);
@@ -338,6 +740,7 @@ if (mapGrid) {
                 const marker = document.createElement('span');
                 marker.className = 'map-point';
                 marker.dataset.pointId = point.id;
+                marker.dataset.deleteUrl = point.delete_url;
                 marker.style.left = `${point.x}%`;
                 marker.style.top = `${point.y}%`;
                 marker.style.setProperty('--point-color', point.color);
@@ -364,6 +767,19 @@ if (mapGrid) {
                 console.error('Repère non supprimé.', error);
             }
         });
+    });
+
+    pointLayer.addEventListener('click', async (event) => {
+        const marker = event.target.closest('.map-point[data-delete-url]');
+        if (!marker || !window.confirm(`Supprimer le repère « ${marker.querySelector('.map-point-label')?.textContent.trim()} » ?`)) return;
+
+        try {
+            await send(marker.dataset.deleteUrl, 'DELETE');
+            document.querySelector(`[data-point-row="${marker.dataset.pointId}"]`)?.remove();
+            marker.remove();
+        } catch (error) {
+            console.error('Repère non supprimé.', error);
+        }
     });
 
     // ── Filtres d'affichage ───────────────────────────────────────────────
