@@ -2,8 +2,10 @@
 
 @section('title', 'Chat')
 @section('context', 'Messages privés')
+@section('body-class', 'chat-page')
 
 @section('content')
+<div class="chat-page-content">
 <div class="page-heading">
     <div class="eyebrow">Entre quatre yeux</div>
     <h1>Chat privé</h1>
@@ -70,5 +72,6 @@
             <div class="empty">Sélectionne une conversation.</div>
         @endif
     </section>
+</div>
 </div>
 @endsection

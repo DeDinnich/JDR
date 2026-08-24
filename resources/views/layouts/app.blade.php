@@ -7,7 +7,8 @@
     <title>@yield('title', 'Le 6ᵉ Monde') · Compagnon JDR</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body data-user-id="{{ auth()->id() }}"
+<body class="@yield('body-class')"
+      data-user-id="{{ auth()->id() }}"
       data-user-role="{{ auth()->user()->role->value }}"
       data-user-name="{{ auth()->user()->name }}"
       data-character-id="{{ auth()->user()->character?->id }}">
