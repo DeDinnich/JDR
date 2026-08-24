@@ -24,7 +24,10 @@
                     <input class="input" id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required autofocus>
                 </div>
                 <div class="form-group">
-                    <label for="password">Sceau secret</label>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+                        <label for="password">Sceau secret</label>
+                        <a class="small" href="{{ route('password.request') }}">Sceau oublié ?</a>
+                    </div>
                     <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
                 </div>
                 <label class="check"><input type="checkbox" name="remember" value="1"> Garder ma place à la table</label>
