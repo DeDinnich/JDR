@@ -18,7 +18,6 @@ class ChatMessageSent implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('conversations.'.$this->message->conversation_id),
             new PrivateChannel('users.'.$this->recipientId),
         ];
     }

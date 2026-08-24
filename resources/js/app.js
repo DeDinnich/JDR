@@ -204,13 +204,15 @@ if (window.Echo && userRole === 'game_master') {
 }
 
 /*
- * Chat privé : l'événement utilisateur alimente le compteur global tandis
- * que le canal de conversation met à jour le fil actuellement ouvert.
- * L'indicateur de frappe est un whisper : il n'est ni stocké ni diffusé à un
- * utilisateur qui ne participe pas à la conversation.
+ * Chat privé : le canal utilisateur, déjà utilisé par les messages secrets,
+ * alimente à la fois le compteur global et le fil actuellement ouvert. Le
+ * canal de conversation est réservé aux whispers de frappe : ils ne sont ni
+ * stockés ni diffusés à un utilisateur extérieur à la conversation.
  */
 let globalUnreadCount = 0;
 const globalChatBadge = document.querySelector('[data-global-chat-unread]');
+let handleActiveChatMessage = null;
+const pendingActiveChatMessages = [];
 
 function renderGlobalUnread(value) {
     globalUnreadCount = Math.max(0, Number(value) || 0);
@@ -222,13 +224,22 @@ function renderGlobalUnread(value) {
 if (window.Echo && userId) {
     window.Echo.private(`users.${userId}`).listen('.chat-message.sent', (event) => {
         const selectedConversation = document.querySelector('[data-chat]')?.dataset.conversationId;
-        if (String(event.conversation_id) !== String(selectedConversation)) {
-            renderGlobalUnread(globalUnreadCount + 1);
-            const contactBadge = document.querySelector(`[data-chat-unread="${event.conversation_id}"]`);
-            if (contactBadge) {
-                contactBadge.textContent = Number(contactBadge.textContent || 0) + 1;
-                contactBadge.classList.remove('is-hidden');
+
+        if (String(event.conversation_id) === String(selectedConversation)) {
+            if (handleActiveChatMessage) {
+                handleActiveChatMessage(event);
+            } else {
+                pendingActiveChatMessages.push(event);
             }
+
+            return;
+        }
+
+        renderGlobalUnread(globalUnreadCount + 1);
+        const contactBadge = document.querySelector(`[data-chat-unread="${event.conversation_id}"]`);
+        if (contactBadge) {
+            contactBadge.textContent = Number(contactBadge.textContent || 0) + 1;
+            contactBadge.classList.remove('is-hidden');
         }
     });
 }
@@ -283,10 +294,12 @@ if (chat) {
     }
 
     const channel = window.Echo?.private(`conversations.${conversationId}`);
-    channel?.listen('.chat-message.sent', (message) => {
+    handleActiveChatMessage = (message) => {
         appendChatMessage(message);
         if (String(message.sender_id) !== String(userId)) markConversationRead();
-    });
+    };
+    pendingActiveChatMessages.splice(0).forEach(handleActiveChatMessage);
+
     channel?.listenForWhisper('typing', (event) => {
         typingIndicator.textContent = event.name ? `${event.name} écrit…` : '';
         window.clearTimeout(typingTimer);

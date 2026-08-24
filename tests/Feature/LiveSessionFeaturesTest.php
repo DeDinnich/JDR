@@ -43,6 +43,10 @@ it('isole chaque conversation et pousse les nouveaux messages en temps réel', f
     expect(ChatMessage::query()->count())->toBe(1);
     Event::assertDispatched(ChatMessageSent::class, fn ($event) => $event->recipientId === $this->gm->id);
 
+    $broadcast = new ChatMessageSent(ChatMessage::query()->firstOrFail()->load('sender'), $this->gm->id);
+    expect(collect($broadcast->broadcastOn())->pluck('name')->all())
+        ->toBe(['private-users.'.$this->gm->id]);
+
     $this->actingAs($this->bob)->get(route('chat.show', $conversation))->assertForbidden();
     $this->actingAs($this->gm)->getJson(route('chat.unread'))->assertJsonPath('count', 1);
     $this->get(route('chat.show', $conversation))->assertOk()->assertSee('Le passage est libre.');
