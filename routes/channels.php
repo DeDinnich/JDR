@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('users.{id}', fn ($user, $id) => (int) $user->id === (int) $id);
 Broadcast::channel('game-masters', fn ($user) => $user->isGameMaster());
+Broadcast::channel('table', fn ($user) => $user !== null);
 Broadcast::channel('characters.{characterId}', fn ($user, $characterId) => $user->isGameMaster() || (int) $user->character?->id === (int) $characterId
 );
 Broadcast::channel('conversations.{conversationId}', function ($user, $conversationId) {

@@ -26,9 +26,9 @@
             @if($identity['race'])<span>{{ $identity['race'] }}</span>@endif
             @if($identity['occupation'])<span>{{ $identity['occupation'] }}</span>@endif
         </p>
-        <div class="resource-bars">
-            <div class="resource"><div class="resource-label"><span class="eyebrow">Vie</span><span>{{ $resources['health'] }} / {{ $resources['max_health'] }}</span></div><div class="gauge gauge-health"><span style="width:{{ $resources['health_percentage'] }}%"></span></div></div>
-            <div class="resource"><div class="resource-label"><span class="eyebrow">Mana</span><span>{{ $resources['mana'] }} / {{ $resources['mana_max'] }}</span></div><div class="gauge gauge-mana"><span style="width:{{ $resources['mana_percentage'] }}%"></span></div></div>
+        <div class="resource-bars" data-character-resource-summary="{{ $sheet['id'] }}">
+            <div class="resource"><div class="resource-label"><span class="eyebrow">Vie</span><span data-summary-health>{{ $resources['health'] }} / {{ $resources['max_health'] }}</span></div><div class="gauge gauge-health"><span data-summary-health-gauge style="width:{{ $resources['health_percentage'] }}%"></span></div></div>
+            <div class="resource"><div class="resource-label"><span class="eyebrow">Mana</span><span data-summary-mana>{{ $resources['mana'] }} / {{ $resources['mana_max'] }}</span></div><div class="gauge gauge-mana"><span data-summary-mana-gauge style="width:{{ $resources['mana_percentage'] }}%"></span></div></div>
         </div>
     </div>
 </section>

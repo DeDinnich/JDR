@@ -279,9 +279,9 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="actions">
-                            <span class="badge">{{ $ally['resources']['health'] }} / {{ $ally['resources']['max_health'] }} PV</span>
-                            <span class="badge">{{ $ally['resources']['mana'] }} / {{ $ally['resources']['mana_max'] }} mana</span>
+                        <div class="actions" data-character-resource-summary="{{ $ally['id'] }}">
+                            <span class="badge" data-summary-health>{{ $ally['resources']['health'] }} / {{ $ally['resources']['max_health'] }} PV</span>
+                            <span class="badge" data-summary-mana>{{ $ally['resources']['mana'] }} / {{ $ally['resources']['mana_max'] }} mana</span>
                         </div>
                     </header>
 

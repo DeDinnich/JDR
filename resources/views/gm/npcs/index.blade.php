@@ -69,35 +69,22 @@
 <section class="section">
     <div class="grid grid-3">
         @forelse($npcs as $npc)
-            <label class="card card-link card-body npc-tile" for="npc-{{ $npc->id }}">
-                <div class="npc-row">
-                    <span class="npc-avatar">
-                        @if($npc->portrait_path)
-                            <img src="{{ $npc->portrait_path }}" alt="">
-                        @else
-                            {{ $npc->initials() }}
-                        @endif
+            <label class="card card-link npc-tile" for="npc-{{ $npc->id }}">
+                <div class="npc-tile-portrait">
+                    @if($npc->portrait_path)
+                        <img src="{{ $npc->portrait_path }}" alt="Portrait de {{ $npc->fullName() }}">
+                    @else
+                        <span>{{ $npc->initials() }}</span>
+                    @endif
+                    <span class="badge badge-gold npc-known-count">
+                        Connu de {{ $npc->discoveredBy->count() }}/{{ $players->count() }}
                     </span>
-                    <div>
-                        <span class="eyebrow">{{ $npc->role ?: $npc->profession ?: 'Sans rôle' }}</span>
-                        <h3 class="display" style="font-size:1.2rem;margin:.25rem 0">{{ $npc->fullName() }}</h3>
-                        @if($npc->house)<span class="muted small">{{ $npc->house->name }}</span>@endif
-                    </div>
                 </div>
 
-                <p class="muted small">{{ Str::limit($npc->description, 100) ?: 'Aucune description.' }}</p>
-
-                <div class="actions">
-                    <span class="badge">{{ $npc->importance->label() }}</span>
-                    <span class="badge">{{ $npc->status->label() }}</span>
-                    <span class="badge badge-gold">Connu de {{ $npc->discoveredBy->count() }}/{{ $players->count() }}</span>
+                <div class="npc-tile-copy">
+                    <h3 class="display">{{ $npc->fullName() }}</h3>
+                    <p>{{ $npc->role ?: $npc->profession ?: 'Sans rôle' }}@if($npc->house) · {{ $npc->house->name }}@endif</p>
                 </div>
-
-                @if($npc->tags)
-                    <div class="actions">
-                        @foreach($npc->tags as $tag)<span class="badge">{{ $tag }}</span>@endforeach
-                    </div>
-                @endif
             </label>
         @empty
             <div class="card empty span-2">Aucun PNJ ne correspond à cette recherche.</div>

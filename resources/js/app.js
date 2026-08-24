@@ -4,6 +4,18 @@ import Pusher from 'pusher-js';
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 const userId = document.body.dataset.userId;
 const userRole = document.body.dataset.userRole;
+const ownedCharacterId = document.body.dataset.characterId;
+
+function realtimeHeaders(extra = {}) {
+    const socketId = window.Echo?.socketId();
+
+    return {
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json',
+        ...(socketId ? {'X-Socket-ID': socketId} : {}),
+        ...extra,
+    };
+}
 
 window.Pusher = Pusher;
 
@@ -65,7 +77,7 @@ function removeSecretMessage(messageId) {
 async function deleteSecretMessage(url) {
     const response = await fetch(url, {
         method: 'DELETE',
-        headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'},
+        headers: realtimeHeaders(),
     });
 
     if (!response.ok) throw new Error(`Suppression refusée (${response.status}).`);
@@ -78,7 +90,7 @@ overlay?.querySelector('[data-secret-dismiss]')?.addEventListener('click', async
     try {
         await fetch(`/messages/${messageId}/lecture`, {
             method: 'POST',
-            headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'},
+            headers: realtimeHeaders(),
         });
         overlay.classList.remove('visible');
         activeMessage = null;
@@ -264,7 +276,7 @@ if (chat) {
     async function markConversationRead() {
         await fetch(chat.dataset.readUrl, {
             method: 'POST',
-            headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+            headers: realtimeHeaders(),
         }).catch(() => null);
         document.querySelector(`[data-chat-unread="${conversationId}"]`)?.classList.add('is-hidden');
         renderGlobalUnread(Math.max(0, globalUnreadCount - 1));
@@ -296,7 +308,7 @@ if (chat) {
         try {
             const response = await fetch(form.action, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+                headers: realtimeHeaders({'Content-Type': 'application/json'}),
                 body: JSON.stringify({body}),
             });
             if (!response.ok) throw new Error(response.statusText);
@@ -321,12 +333,14 @@ function renderResourcesPanel(panel, resources) {
     if (health) {
         health.max = resources.max_health;
         health.value = resources.health;
+        health.style.setProperty('--resource-progress', `${resources.health_percentage}%`);
         panel.querySelector('[data-resource-value="health"]').textContent = `${resources.health} / ${resources.max_health}`;
     }
     if (mana) {
         mana.max = Math.max(1, resources.mana_max);
         mana.value = resources.mana;
         mana.disabled = resources.mana_max === 0;
+        mana.style.setProperty('--resource-progress', `${resources.mana_percentage}%`);
         panel.querySelector('[data-resource-value="mana_current"]').textContent = `${resources.mana} / ${resources.mana_max}`;
     }
 
@@ -339,6 +353,24 @@ function renderResourcesPanel(panel, resources) {
     }
 }
 
+function renderCharacterResources(resources) {
+    document.querySelectorAll(`[data-character-resources="${CSS.escape(String(resources.character_id))}"]`)
+        .forEach((panel) => renderResourcesPanel(panel, resources));
+
+    document.querySelectorAll(`[data-character-resource-summary="${CSS.escape(String(resources.character_id))}"]`)
+        .forEach((summary) => {
+            const health = summary.querySelector('[data-summary-health]');
+            const mana = summary.querySelector('[data-summary-mana]');
+            const healthGauge = summary.querySelector('[data-summary-health-gauge]');
+            const manaGauge = summary.querySelector('[data-summary-mana-gauge]');
+
+            if (health) health.textContent = `${resources.health} / ${resources.max_health}${health.classList.contains('badge') ? ' PV' : ''}`;
+            if (mana) mana.textContent = `${resources.mana} / ${resources.mana_max}${mana.classList.contains('badge') ? ' mana' : ''}`;
+            if (healthGauge) healthGauge.style.width = `${resources.health_percentage}%`;
+            if (manaGauge) manaGauge.style.width = `${resources.mana_percentage}%`;
+        });
+}
+
 document.querySelectorAll('[data-character-resources]').forEach((panel) => {
     const characterId = panel.dataset.characterResources;
     const status = panel.querySelector('[data-resource-status]');
@@ -347,6 +379,8 @@ document.querySelectorAll('[data-character-resources]').forEach((panel) => {
     panel.querySelectorAll('[data-resource]').forEach((range) => {
         range.addEventListener('input', () => {
             const maximum = Number(range.max);
+            const percentage = maximum > 0 ? (Number(range.value) / maximum) * 100 : 0;
+            range.style.setProperty('--resource-progress', `${Math.max(0, Math.min(100, percentage))}%`);
             panel.querySelector(`[data-resource-value="${range.dataset.resource}"]`).textContent = `${range.value} / ${maximum}`;
             status.textContent = 'Modification…';
             window.clearTimeout(timers.get(range.dataset.resource));
@@ -354,7 +388,7 @@ document.querySelectorAll('[data-character-resources]').forEach((panel) => {
                 try {
                     const response = await fetch(panel.dataset.resourceUrl, {
                         method: 'PUT',
-                        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+                        headers: realtimeHeaders({'Content-Type': 'application/json'}),
                         body: JSON.stringify({resource: range.dataset.resource, value: Number(range.value)}),
                     });
                     if (!response.ok) throw new Error(response.statusText);
@@ -368,8 +402,22 @@ document.querySelectorAll('[data-character-resources]').forEach((panel) => {
         });
     });
 
+});
+
+// Ressources publiques de la tablée : chaque page authentifiée reste à jour,
+// y compris le dashboard MJ, les fiches joueur et les vues d'alliés.
+window.Echo?.private('table')
+    .listen('.character-resources.updated', renderCharacterResources);
+
+// Les autres événements de fiche restent privés au propriétaire et au MJ.
+const visibleCharacterIds = new Set(
+    [...document.querySelectorAll('[data-character-resources]')]
+        .map((panel) => panel.dataset.characterResources),
+);
+if (ownedCharacterId) visibleCharacterIds.add(ownedCharacterId);
+
+visibleCharacterIds.forEach((characterId) => {
     window.Echo?.private(`characters.${characterId}`)
-        .listen('.character-resources.updated', (resources) => renderResourcesPanel(panel, resources))
         .listen('.character-skill.updated', updateSkillRow)
         .listen('.character-sheet.updated', (sheet) => applySheetUpdate(sheet));
 });

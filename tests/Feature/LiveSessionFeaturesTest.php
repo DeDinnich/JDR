@@ -2,11 +2,13 @@
 
 use App\Enums\RevealState;
 use App\Enums\UserRole;
+use App\Events\CharacterResourcesUpdated;
 use App\Events\ChatMessageSent;
 use App\Models\ChatMessage;
 use App\Models\Conversation;
 use App\Models\User;
 use App\Services\CharacterSheet\CharacterSheetPresenter;
+use App\Services\ChatService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
@@ -48,6 +50,27 @@ it('isole chaque conversation et pousse les nouveaux messages en temps réel', f
     expect(ChatMessage::query()->firstOrFail()->read_at)->not->toBeNull();
 });
 
+it('affiche le chat du plus ancien au plus récent et place les messages du compte connecté à droite', function () {
+    $conversation = app(ChatService::class)->between($this->alice, $this->gm);
+    $conversation->messages()->create([
+        'sender_id' => $this->gm->id,
+        'body' => 'Premier message chronologique',
+    ]);
+    $conversation->messages()->create([
+        'sender_id' => $this->alice->id,
+        'body' => 'Second message chronologique',
+    ]);
+
+    $response = $this->actingAs($this->alice)
+        ->get(route('chat.show', $conversation))
+        ->assertOk()
+        ->assertSeeInOrder(['Premier message chronologique', 'Second message chronologique']);
+
+    expect($response->getContent())
+        ->toContain('class="chat-message "')
+        ->toContain('class="chat-message is-mine"');
+});
+
 it('cumule la base et les bonus distincts du MJ et du joueur', function () {
     $skill = $this->alice->character->skills()->with('definition.primaryAttribute', 'definition.secondaryAttribute')->firstOrFail();
     $skill->forceFill(['reveal_state' => RevealState::Revealed])->save();
@@ -77,6 +100,7 @@ it('cumule la base et les bonus distincts du MJ et du joueur', function () {
 });
 
 it('synchronise vie et mana sans dépasser leurs maximums', function () {
+    Event::fake([CharacterResourcesUpdated::class]);
     $character = $this->alice->character;
     $character->forceFill(['max_health' => 12, 'mana_max' => 8])->save();
 
@@ -94,6 +118,13 @@ it('synchronise vie et mana sans dépasser leurs maximums', function () {
         'resource' => 'health',
         'value' => 1,
     ])->assertForbidden();
+
+    Event::assertDispatched(CharacterResourcesUpdated::class, function (CharacterResourcesUpdated $event) use ($character): bool {
+        $channels = collect($event->broadcastOn())->pluck('name');
+
+        return $channels->contains('private-characters.'.$character->id)
+            && $channels->contains('private-table');
+    });
 });
 
 it('laisse le MJ envoyer le portrait du personnage et ouvre la fiche complète aux compagnons', function () {

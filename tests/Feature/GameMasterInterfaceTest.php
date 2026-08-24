@@ -26,6 +26,7 @@ it('affiche et pilote vie et mana directement sur le dashboard MJ', function () 
     $response->assertSee('data-character-resources="'.$this->player->character->id.'"', false)
         ->assertSee('data-resource="health"', false)
         ->assertSee('data-resource="mana_current"', false)
+        ->assertSee('--resource-progress:', false)
         ->assertDontSee('Sans zone');
 });
 

@@ -24,7 +24,12 @@ class CharacterResourcesUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('characters.'.$this->character->id)];
+        return [
+            new PrivateChannel('characters.'.$this->character->id),
+            // Les ressources sont déjà visibles par toute la tablée sur les
+            // fiches alliées. Ce canal les synchronise depuis n'importe quelle page.
+            new PrivateChannel('table'),
+        ];
     }
 
     public function broadcastAs(): string

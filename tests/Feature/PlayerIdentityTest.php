@@ -99,8 +99,15 @@ it('montre les chiffres des autres joueurs mais ni leur sac ni leurs notes', fun
 
     $response->assertSee('Autres joueurs')
         ->assertSee('Lira')
+        ->assertSee('data-character-resource-summary="'.$this->ally->character->id.'"', false)
         // L'inventaire d'un compagnon ne le regarde pas.
         ->assertDontSee('Amulette secrète');
+
+    $this->actingAs($this->player)
+        ->get(route('player.allies.show', $this->ally->character))
+        ->assertOk()
+        ->assertSee('data-summary-health-gauge', false)
+        ->assertSee('data-summary-mana-gauge', false);
 
     $allies = $response->viewData('allies');
 

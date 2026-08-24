@@ -65,7 +65,15 @@ class ChatController extends Controller
             $selected->loadMissing(['participantOne.character', 'participantTwo.character']);
         }
 
-        $messages = $selected?->messages()->with('sender')->latest('id')->limit(100)->get()->reverse()->values()
+        // On récupère les 100 plus récents sans laisser l'ordre implicite de
+        // la relation interférer, puis on les rend du plus ancien au plus récent.
+        $messages = $selected?->messages()
+            ->with('sender')
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get()
+            ->sortBy('id')
+            ->values()
             ?? collect();
 
         return view('chat.index', [

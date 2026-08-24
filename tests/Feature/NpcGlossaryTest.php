@@ -48,6 +48,23 @@ it('interdit à un joueur tout accès à l’espace PNJ du MJ', function () {
     ])->assertForbidden();
 });
 
+it('met le portrait en avant et ne garde que le compteur de connaissance sur les cartes MJ', function () {
+    $this->cassian->update(['tags' => ['ETIQUETTE_A_NE_PAS_AFFICHER']]);
+
+    $response = actingAs($this->gm)->get(route('gm.npcs.index'))->assertOk();
+    preg_match(
+        '/<label class="card card-link npc-tile" for="npc-'.$this->cassian->id.'">(.*?)<\/label>/s',
+        $response->getContent(),
+        $tile,
+    );
+
+    expect($tile)->not->toBeEmpty()
+        ->and($tile[1])->toContain('npc-tile-portrait')
+        ->toContain('Connu de')
+        ->not->toContain('ETIQUETTE_A_NE_PAS_AFFICHER')
+        ->and(substr_count($tile[1], 'class="badge'))->toBe(1);
+});
+
 it('n’expose jamais un secret MJ dans la fiche joueur', function () {
     // Cassian est connu d'Alice, secrets compris côté MJ.
     $this->cassian->discoveredBy()->attach($this->alice->id, ['discovered_at' => now()]);
