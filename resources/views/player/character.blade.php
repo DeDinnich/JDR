@@ -17,13 +17,14 @@
 @php($resources = $sheet['resources'])
 
 <section class="card sheet-hero">
-    <div class="sheet-portrait">
+    <label class="sheet-portrait sheet-portrait-action" for="edit-portrait" title="Modifier le portrait">
         @if($identity['portrait_path'])
             <img src="{{ $identity['portrait_path'] }}" alt="Portrait de {{ $identity['name'] }}">
         @else
             {{ $identity['initials'] }}
         @endif
-    </div>
+        <span class="sheet-portrait-hint">Changer le portrait</span>
+    </label>
 
     <div class="sheet-identity">
         <div class="eyebrow">{{ $identity['adventurer_title'] ?: 'Sans titre' }}</div>
@@ -337,6 +338,50 @@
 </div>
 
 {{-- ── Modales d'édition ───────────────────────────────────────────────── --}}
+<input class="modal-toggle" type="checkbox" id="edit-portrait" hidden @error('portrait') checked @enderror>
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="portrait-modal-title">
+    <label class="modal-backdrop" for="edit-portrait" aria-hidden="true"></label>
+    <div class="modal-panel card">
+        <header class="card-header">
+            <div>
+                <div class="eyebrow">Portrait du personnage</div>
+                <h2 id="portrait-modal-title">Choisir une image</h2>
+            </div>
+            <label class="btn btn-ghost btn-sm" for="edit-portrait" title="Fermer">✕</label>
+        </header>
+
+        <form method="POST" action="{{ route('player.portrait.update') }}" enctype="multipart/form-data" class="card-body">
+            @csrf
+            <div class="portrait-upload-layout">
+                <span class="portrait-upload-preview">
+                    @if($identity['portrait_path'])
+                        <img src="{{ $identity['portrait_path'] }}" alt="Portrait actuel de {{ $identity['name'] }}">
+                    @else
+                        {{ $identity['initials'] }}
+                    @endif
+                </span>
+                <div class="stack">
+                    <div class="form-group">
+                        <label for="portrait">JPEG, PNG ou WebP · 4 Mo maximum</label>
+                        <input class="input" id="portrait" type="file" name="portrait" accept="image/jpeg,image/png,image/webp" required>
+                    </div>
+                    @error('portrait')<p class="form-error">{{ $message }}</p>@enderror
+                    <div class="actions">
+                        <button class="btn btn-primary" type="submit">Mettre à jour le portrait</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        @if($identity['portrait_path'])
+            <form method="POST" action="{{ route('player.portrait.destroy') }}" class="card-body" style="padding-top:0">
+                @csrf @method('DELETE')
+                <button class="btn btn-ghost btn-sm danger" type="submit">Retirer le portrait actuel</button>
+            </form>
+        @endif
+    </div>
+</div>
+
 <input class="modal-toggle" type="checkbox" id="edit-identity" hidden>
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Modifier ton identité">
     <label class="modal-backdrop" for="edit-identity" aria-hidden="true"></label>
@@ -346,34 +391,7 @@
             <label class="btn btn-ghost btn-sm" for="edit-identity" title="Fermer">✕</label>
         </header>
 
-        {{-- Portrait : formulaire séparé, car il transporte un fichier. --}}
-        <form method="POST" action="{{ route('player.portrait.update') }}" enctype="multipart/form-data" class="card-body">
-            @csrf
-            <div class="actions">
-                <span class="brand-mark">
-                    @if($identity['portrait_path'])
-                        <img src="{{ $identity['portrait_path'] }}" alt="">
-                    @else
-                        {{ $identity['initials'] }}
-                    @endif
-                </span>
-                <div class="form-group" style="flex:1;min-width:12rem">
-                    <label for="portrait">Portrait (JPEG, PNG ou WebP — 4 Mo max)</label>
-                    <input class="input" id="portrait" type="file" name="portrait" accept="image/jpeg,image/png,image/webp" required>
-                </div>
-                <button class="btn btn-secondary btn-sm" type="submit">Envoyer</button>
-            </div>
-            @error('portrait')<p class="form-error">{{ $message }}</p>@enderror
-        </form>
-
-        @if($identity['portrait_path'])
-            <form method="POST" action="{{ route('player.portrait.destroy') }}" class="card-body" style="padding-top:0">
-                @csrf @method('DELETE')
-                <button class="btn btn-ghost btn-sm" type="submit">Retirer le portrait</button>
-            </form>
-        @endif
-
-        <form method="POST" action="{{ route('player.identity.update') }}" class="card-body" style="padding-top:0">
+        <form method="POST" action="{{ route('player.identity.update') }}" class="card-body">
             @csrf @method('PUT')
             <div class="form-grid">
                 <div class="form-group"><label>Prénom</label><input class="input" name="first_name" value="{{ old('first_name', $identity['first_name']) }}" required></div>

@@ -103,7 +103,8 @@ it('fait apparaître le PNJ dans le glossaire une fois révélé', function () {
 
     actingAs($this->alice)->get(route('player.glossary.index'))
         ->assertOk()
-        ->assertSee('Cassian Vaelmont');
+        ->assertSee('Cassian Vaelmont')
+        ->assertSee('class="grid grid-4"', false);
 
     // Bob n'était pas visé : pour lui, rien n'a changé.
     actingAs($this->bob)->get(route('player.glossary.index'))

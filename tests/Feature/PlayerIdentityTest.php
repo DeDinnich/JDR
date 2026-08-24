@@ -75,6 +75,14 @@ it('accepte un portrait envoyé par le joueur et refuse un fichier douteux', fun
     ])->assertSessionHasErrors('portrait');
 });
 
+it('ouvre le chargement du portrait depuis la photo principale', function () {
+    $this->actingAs($this->player)->get(route('player.character'))
+        ->assertOk()
+        ->assertSee('for="edit-portrait"', false)
+        ->assertSee('id="edit-portrait"', false)
+        ->assertSee('Mettre à jour le portrait');
+});
+
 it('remplace le portrait sans laisser de fichier orphelin', function () {
     Storage::fake('public');
 

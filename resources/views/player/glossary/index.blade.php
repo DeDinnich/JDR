@@ -14,7 +14,7 @@
     <p>{{ count($npcs) }} personne(s) rencontrée(s).</p>
 </div>
 
-<div class="grid grid-3">
+<div class="grid grid-4">
     @forelse($npcs as $npc)
         <article class="card glossary-card">
             <div class="glossary-portrait">
