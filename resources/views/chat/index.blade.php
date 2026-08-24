@@ -58,8 +58,12 @@
 
             <form class="chat-composer" data-chat-form action="{{ route('chat.messages.store', $selected) }}">
                 <label class="sr-only" for="chat-body">Message</label>
-                <textarea class="textarea" id="chat-body" name="body" rows="2" maxlength="4000"
-                          placeholder="Écrire un message privé…" required data-chat-input></textarea>
+                <div class="chat-compose-field">
+                    <textarea class="textarea" id="chat-body" name="body" rows="2" maxlength="4000"
+                              aria-describedby="chat-shortcut"
+                              placeholder="Écrire un message privé…" required data-chat-input></textarea>
+                    <span id="chat-shortcut">Entrée pour envoyer · Maj+Entrée pour aller à la ligne</span>
+                </div>
                 <button class="btn btn-primary" type="submit">Envoyer</button>
             </form>
         @else

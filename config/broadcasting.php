@@ -1,7 +1,10 @@
 <?php
 
 return [
-    'default' => env('BROADCAST_CONNECTION', 'null'),
+    // Le temps réel est une dépendance fonctionnelle de l'application
+    // (chat, ressources, révélations). Ne jamais le désactiver silencieusement
+    // lorsqu'une variable d'environnement manque en production.
+    'default' => env('BROADCAST_CONNECTION', 'reverb'),
 
     'connections' => [
         'reverb' => [

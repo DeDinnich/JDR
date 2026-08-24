@@ -5,46 +5,6 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 const userId = document.body.dataset.userId;
 const userRole = document.body.dataset.userRole;
 const ownedCharacterId = document.body.dataset.characterId;
-const realtimeDebugPrefix = '[JDR:Realtime]';
-const debuggedRealtimeChannels = new Set();
-
-function realtimeLog(message, context = {}) {
-    console.info(`${realtimeDebugPrefix} ${message}`, context);
-}
-
-function realtimeWarn(message, context = {}) {
-    console.warn(`${realtimeDebugPrefix} ${message}`, context);
-}
-
-function realtimeError(message, context = {}) {
-    console.error(`${realtimeDebugPrefix} ${message}`, context);
-}
-
-function debugPrivateChannel(name) {
-    if (!window.Echo) {
-        realtimeWarn('Souscription privée impossible : Echo est absent.', {channel: name});
-
-        return null;
-    }
-
-    const channel = window.Echo.private(name);
-
-    if (!debuggedRealtimeChannels.has(name)) {
-        debuggedRealtimeChannels.add(name);
-        realtimeLog('Souscription au canal privé demandée.', {channel: `private-${name}`});
-        channel
-            .subscribed(() => realtimeLog('Souscription au canal privé réussie.', {
-                channel: `private-${name}`,
-                socket_id: window.Echo?.socketId() ?? null,
-            }))
-            .error((status) => realtimeError('Échec de souscription au canal privé.', {
-                channel: `private-${name}`,
-                status: status?.status ?? status?.type ?? status ?? 'inconnu',
-            }));
-    }
-
-    return channel;
-}
 
 function realtimeHeaders(extra = {}) {
     const socketId = window.Echo?.socketId();
@@ -67,17 +27,6 @@ if (userId && import.meta.env.VITE_REVERB_APP_KEY) {
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     };
 
-    realtimeLog('Initialisation Echo/Reverb.', {
-        client: 'chat-ws-diagnostics-v1',
-        user_id: userId,
-        role: userRole,
-        page: window.location.pathname,
-        host: reverbConfig.wsHost,
-        port: reverbConfig.forceTLS ? reverbConfig.wssPort : reverbConfig.wsPort,
-        scheme: reverbConfig.forceTLS ? 'wss' : 'ws',
-        app_key_present: true,
-    });
-
     window.Echo = new Echo({
         broadcaster: 'reverb',
         key: import.meta.env.VITE_REVERB_APP_KEY,
@@ -85,30 +34,6 @@ if (userId && import.meta.env.VITE_REVERB_APP_KEY) {
         // localhost sur le poste MJ, IP LAN sur téléphone, domaine en prod.
         ...reverbConfig,
         enabledTransports: ['ws', 'wss'],
-    });
-
-    const connection = window.Echo.connector?.pusher?.connection;
-    connection?.bind('state_change', ({previous, current}) => realtimeLog('État de connexion modifié.', {
-        previous,
-        current,
-        socket_id: connection.socket_id ?? null,
-    }));
-    connection?.bind('connected', () => realtimeLog('Connexion WebSocket établie.', {
-        socket_id: connection.socket_id ?? null,
-    }));
-    connection?.bind('disconnected', () => realtimeWarn('Connexion WebSocket interrompue.'));
-    connection?.bind('unavailable', () => realtimeWarn('Serveur WebSocket indisponible.'));
-    connection?.bind('failed', () => realtimeError('Connexion WebSocket définitivement échouée.'));
-    connection?.bind('error', (error) => realtimeError('Erreur de connexion WebSocket.', {
-        type: error?.type ?? null,
-        code: error?.error?.data?.code ?? error?.data?.code ?? null,
-        message: error?.error?.data?.message ?? error?.data?.message ?? error?.message ?? 'Erreur sans message',
-    }));
-} else {
-    realtimeWarn('Echo/Reverb non initialisé.', {
-        authenticated_user: Boolean(userId),
-        app_key_present: Boolean(import.meta.env.VITE_REVERB_APP_KEY),
-        page: window.location.pathname,
     });
 }
 
@@ -263,7 +188,7 @@ revealOverlay?.querySelector('[data-reveal-dismiss]')?.addEventListener('click',
 });
 
 if (window.Echo && userRole === 'player') {
-    debugPrivateChannel(`users.${userId}`)
+    window.Echo.private(`users.${userId}`)
         .listen('.secret-message.sent', enqueueMessage)
         .listen('.secret-message.deleted', (event) => removeSecretMessage(event.id))
         .listen('.character-sheet.revealed', showReveal)
@@ -271,7 +196,7 @@ if (window.Echo && userRole === 'player') {
 }
 
 if (window.Echo && userRole === 'game_master') {
-    debugPrivateChannel('game-masters')
+    window.Echo.private('game-masters')
         .listen('.secret-message.read', (event) => {
             const status = document.querySelector(`[data-message-id="${event.id}"]`);
             if (status) {
@@ -301,43 +226,19 @@ function renderGlobalUnread(value) {
 }
 
 if (window.Echo && userId) {
-    const userChannel = debugPrivateChannel(`users.${userId}`);
-    realtimeLog('Écoute des messages de chat activée.', {
-        channel: `private-users.${userId}`,
-    });
-
-    userChannel?.listen('.chat-message.sent', (event) => {
+    window.Echo.private(`users.${userId}`).listen('.chat-message.sent', (event) => {
         const selectedConversation = document.querySelector('[data-chat]')?.dataset.conversationId;
-        realtimeLog('Événement chat-message.sent reçu.', {
-            message_id: event.id,
-            conversation_id: event.conversation_id,
-            sender_id: event.sender_id,
-            selected_conversation_id: selectedConversation ?? null,
-            active_handler_ready: Boolean(handleActiveChatMessage),
-        });
 
         if (String(event.conversation_id) === String(selectedConversation)) {
             if (handleActiveChatMessage) {
-                realtimeLog('Message transmis au fil actuellement ouvert.', {
-                    message_id: event.id,
-                    conversation_id: event.conversation_id,
-                });
                 handleActiveChatMessage(event);
             } else {
                 pendingActiveChatMessages.push(event);
-                realtimeWarn('Fil actif pas encore initialisé : message mis en attente.', {
-                    message_id: event.id,
-                    conversation_id: event.conversation_id,
-                });
             }
 
             return;
         }
 
-        realtimeLog('Message reçu pour une autre conversation : compteur incrémenté.', {
-            message_id: event.id,
-            conversation_id: event.conversation_id,
-        });
         renderGlobalUnread(globalUnreadCount + 1);
         const contactBadge = document.querySelector(`[data-chat-unread="${event.conversation_id}"]`);
         if (contactBadge) {
@@ -366,26 +267,12 @@ if (chat) {
     let typingTimer = null;
     let whisperTimer = null;
 
-    realtimeLog('Initialisation du fil de chat.', {
-        conversation_id: conversationId,
-        initial_message_count: seenMessageIds.size,
-        connection_state: window.Echo?.connector?.pusher?.connection?.state ?? 'absente',
-        socket_id: window.Echo?.socketId() ?? null,
-    });
-
     function scrollChat() {
         list.scrollTop = list.scrollHeight;
     }
 
     function appendChatMessage(message) {
-        if (seenMessageIds.has(String(message.id))) {
-            realtimeWarn('Message ignoré car déjà présent dans le fil.', {
-                message_id: message.id,
-                conversation_id: message.conversation_id,
-            });
-
-            return;
-        }
+        if (seenMessageIds.has(String(message.id))) return;
         seenMessageIds.add(String(message.id));
 
         const article = document.createElement('article');
@@ -399,59 +286,30 @@ if (chat) {
         article.append(bubble, meta);
         list.appendChild(article);
         scrollChat();
-        realtimeLog('Message ajouté au DOM du chat.', {
-            message_id: message.id,
-            conversation_id: message.conversation_id,
-            sender_id: message.sender_id,
-            is_mine: String(message.sender_id) === String(userId),
-        });
     }
 
     async function markConversationRead() {
-        const socketId = window.Echo?.socketId() ?? null;
-        realtimeLog('Accusé de lecture envoyé.', {conversation_id: conversationId, socket_id: socketId});
-
         try {
-            const response = await fetch(chat.dataset.readUrl, {
+            await fetch(chat.dataset.readUrl, {
                 method: 'POST',
                 headers: realtimeHeaders(),
             });
-            realtimeLog('Réponse de l’accusé de lecture reçue.', {
-                conversation_id: conversationId,
-                status: response.status,
-                ok: response.ok,
-            });
         } catch (error) {
-            realtimeError('Échec réseau de l’accusé de lecture.', {
-                conversation_id: conversationId,
-                message: error?.message ?? String(error),
-            });
+            console.error('Accusé de lecture non envoyé.', error);
         }
 
         document.querySelector(`[data-chat-unread="${conversationId}"]`)?.classList.add('is-hidden');
         renderGlobalUnread(Math.max(0, globalUnreadCount - 1));
     }
 
-    const channel = debugPrivateChannel(`conversations.${conversationId}`);
+    const channel = window.Echo?.private(`conversations.${conversationId}`);
     handleActiveChatMessage = (message) => {
-        realtimeLog('Traitement du message par le fil actif.', {
-            message_id: message.id,
-            conversation_id: message.conversation_id,
-        });
         appendChatMessage(message);
         if (String(message.sender_id) !== String(userId)) markConversationRead();
     };
-    realtimeLog('Gestionnaire du fil actif prêt.', {
-        conversation_id: conversationId,
-        pending_message_count: pendingActiveChatMessages.length,
-    });
     pendingActiveChatMessages.splice(0).forEach(handleActiveChatMessage);
 
     channel?.listenForWhisper('typing', (event) => {
-        realtimeLog('Whisper de frappe reçu.', {
-            conversation_id: conversationId,
-            typing: Boolean(event.name),
-        });
         typingIndicator.textContent = event.name ? `${event.name} écrit…` : '';
         window.clearTimeout(typingTimer);
         typingTimer = window.setTimeout(() => { typingIndicator.textContent = ''; }, 1500);
@@ -459,18 +317,17 @@ if (chat) {
 
     input?.addEventListener('input', () => {
         window.clearTimeout(whisperTimer);
-        realtimeLog('Whisper de frappe envoyé.', {
-            conversation_id: conversationId,
-            socket_id: window.Echo?.socketId() ?? null,
-        });
         channel?.whisper('typing', {name: document.body.dataset.userName || 'Quelqu’un'});
         whisperTimer = window.setTimeout(() => {
-            realtimeLog('Whisper de fin de frappe envoyé.', {
-                conversation_id: conversationId,
-                socket_id: window.Echo?.socketId() ?? null,
-            });
             channel?.whisper('typing', {name: ''});
         }, 1200);
+    });
+
+    input?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+
+        event.preventDefault();
+        form?.requestSubmit();
     });
 
     form?.addEventListener('submit', async (event) => {
@@ -478,12 +335,6 @@ if (chat) {
         const body = input.value.trim();
         if (!body) return;
         input.disabled = true;
-        realtimeLog('Envoi HTTP du message de chat.', {
-            conversation_id: conversationId,
-            body_length: body.length,
-            socket_id: window.Echo?.socketId() ?? null,
-            connection_state: window.Echo?.connector?.pusher?.connection?.state ?? 'absente',
-        });
 
         try {
             const response = await fetch(form.action, {
@@ -492,20 +343,11 @@ if (chat) {
                 body: JSON.stringify({body}),
             });
             const payload = await response.json().catch(() => null);
-            realtimeLog('Réponse HTTP du message reçue.', {
-                conversation_id: conversationId,
-                status: response.status,
-                ok: response.ok,
-                message_id: payload?.id ?? null,
-            });
             if (!response.ok) throw new Error(payload?.message ?? response.statusText);
             appendChatMessage(payload);
             input.value = '';
         } catch (error) {
-            realtimeError('Message non envoyé.', {
-                conversation_id: conversationId,
-                message: error?.message ?? String(error),
-            });
+            console.error('Message non envoyé.', error);
         } finally {
             input.disabled = false;
             input.focus();
@@ -513,10 +355,6 @@ if (chat) {
     });
 
     scrollChat();
-} else if (document.querySelector('[data-chat]')) {
-    realtimeWarn('Page de chat sans conversation active.', {
-        echo_available: Boolean(window.Echo),
-    });
 }
 
 /* Ressources de fiche : mise à jour optimiste, sauvegarde temporisée et
@@ -601,7 +439,7 @@ document.querySelectorAll('[data-character-resources]').forEach((panel) => {
 // Ressources publiques de la tablée : chaque page authentifiée reste à jour,
 // y compris le dashboard MJ, les fiches joueur et les vues d'alliés.
 window.Echo?.private('table')
-    .listen('.character-resources.updated', renderCharacterResources);
+    ?.listen('.character-resources.updated', renderCharacterResources);
 
 // Les autres événements de fiche restent privés au propriétaire et au MJ.
 const visibleCharacterIds = new Set(
@@ -612,7 +450,7 @@ if (ownedCharacterId) visibleCharacterIds.add(ownedCharacterId);
 
 visibleCharacterIds.forEach((characterId) => {
     window.Echo?.private(`characters.${characterId}`)
-        .listen('.character-skill.updated', updateSkillRow)
+        ?.listen('.character-skill.updated', updateSkillRow)
         .listen('.character-sheet.updated', (sheet) => applySheetUpdate(sheet));
 });
 

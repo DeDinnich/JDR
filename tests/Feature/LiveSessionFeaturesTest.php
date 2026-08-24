@@ -68,6 +68,7 @@ it('affiche le chat du plus ancien au plus récent et place les messages du comp
     $response = $this->actingAs($this->alice)
         ->get(route('chat.show', $conversation))
         ->assertOk()
+        ->assertSee('Maj+Entrée pour aller à la ligne')
         ->assertSeeInOrder(['Premier message chronologique', 'Second message chronologique']);
 
     expect($response->getContent())

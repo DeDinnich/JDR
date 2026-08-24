@@ -521,6 +521,8 @@ label { color: #b7bdb5; font-size: .73rem; font-weight: 700; letter-spacing: .03
 .chat-message.is-mine .chat-bubble { border-color: rgba(202,165,91,.26); border-radius: .75rem .75rem .2rem .75rem; background: rgba(202,165,91,.1); }
 .chat-message > span { color: var(--muted); font-size: .65rem; }
 .chat-composer { display: grid; grid-template-columns: 1fr auto; gap: .65rem; align-items: end; padding: .8rem; border-top: 1px solid var(--line); }
+.chat-compose-field { display: grid; gap: .25rem; }
+.chat-compose-field > span { color: var(--muted); font-size: .65rem; }
 .chat-composer textarea { min-height: 3rem; max-height: 9rem; resize: vertical; }
 .is-hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
