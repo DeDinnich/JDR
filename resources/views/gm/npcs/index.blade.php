@@ -67,7 +67,7 @@
 
 {{-- ── Galerie ─────────────────────────────────────────────────────────── --}}
 <section class="section">
-    <div class="grid grid-3">
+    <div class="grid grid-4">
         @forelse($npcs as $npc)
             <label class="card card-link npc-tile" for="npc-{{ $npc->id }}">
                 <div class="npc-tile-portrait">
