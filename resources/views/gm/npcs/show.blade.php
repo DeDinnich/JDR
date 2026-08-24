@@ -52,7 +52,7 @@
 </section>
 
 {{-- ── Révélation ─────────────────────────────────────────────────────── --}}
-<section class="card">
+<section class="card section">
     <header class="card-header">
         <div><h2>Révéler ce personnage</h2><p class="muted small" style="margin:.2rem 0 0">Les joueurs choisis le découvrent immédiatement dans leur glossaire.</p></div>
         <span class="badge badge-gold">{{ $npc->discoveredBy->count() }} joueur(s) le connaissent</span>
