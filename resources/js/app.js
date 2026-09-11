@@ -894,8 +894,35 @@ if (houseChoice && window.Echo) {
 }
 
 /*
- * Bestiaire : les jets restent autoritaires côté serveur. Le navigateur ne
- * reçoit que le détail du résultat, jamais une formule évaluée localement.
+ * Bestiaire : aperçu immédiat des ressources pendant l'édition. La validation
+ * et la valeur persistée restent autoritaires côté serveur.
+ */
+['health', 'mana'].forEach((resource) => {
+    const currentInput = document.querySelector(`[data-monster-resource-current="${resource}"]`);
+    const maxInput = document.querySelector(`[data-monster-resource-max="${resource}"]`);
+    const currentOutput = document.querySelector(`[data-monster-current-output="${resource}"]`);
+    const maxOutput = document.querySelector(`[data-monster-max-output="${resource}"]`);
+    const gauge = document.querySelector(`[data-monster-gauge="${resource}"]`);
+
+    if (!currentInput || !maxInput || !gauge) return;
+
+    const render = () => {
+        const current = Math.max(0, Number(currentInput.value) || 0);
+        const maximum = Math.max(0, Number(maxInput.value) || 0);
+        const progress = maximum > 0 ? Math.min(100, (current / maximum) * 100) : 0;
+
+        if (currentOutput) currentOutput.textContent = String(current);
+        if (maxOutput) maxOutput.textContent = String(maximum);
+        gauge.style.width = `${progress}%`;
+    };
+
+    currentInput.addEventListener('input', render);
+    maxInput.addEventListener('input', render);
+});
+
+/*
+ * Les jets restent autoritaires côté serveur. Le navigateur ne reçoit que le
+ * détail du résultat, jamais une formule évaluée localement.
  */
 document.querySelectorAll('[data-dice-roll]').forEach((button) => {
     button.addEventListener('click', async () => {
