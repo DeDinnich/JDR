@@ -63,6 +63,17 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function discoveredMonsters(): BelongsToMany
+    {
+        return $this->belongsToMany(Monster::class)
+            ->using(MonsterKnowledge::class)
+            ->withPivot([
+                'discovered_at', 'known_health', 'known_mana', 'known_abilities',
+                'known_damage', 'known_weakness', 'personal_notes',
+            ])
+            ->withTimestamps();
+    }
+
     public function receivedMessages(): HasMany
     {
         return $this->hasMany(SecretMessage::class, 'recipient_id');

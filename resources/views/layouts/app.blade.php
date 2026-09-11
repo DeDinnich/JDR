@@ -26,6 +26,7 @@
                      aussi la base de PNJ, qui a son propre lien juste en dessous. --}}
                 <a class="nav-link {{ request()->routeIs('gm.world.*', 'gm.maps.*', 'gm.locations.*') ? 'active' : '' }}" href="{{ route('gm.world.index') }}"><span class="nav-icon">⌖</span>Monde</a>
                 <a class="nav-link {{ request()->routeIs('gm.npcs.*') ? 'active' : '' }}" href="{{ route('gm.npcs.index') }}"><span class="nav-icon">☗</span>PNJ</a>
+                <a class="nav-link {{ request()->routeIs('gm.bestiary.*') ? 'active' : '' }}" href="{{ route('gm.bestiary.index') }}"><span class="nav-icon">♜</span>Bestiaire</a>
                 <a class="nav-link {{ request()->routeIs('gm.notes.*') ? 'active' : '' }}" href="{{ route('gm.notes.index') }}"><span class="nav-icon">≡</span>Journal</a>
             @else
                 <a class="nav-link {{ request()->routeIs('player.character') ? 'active' : '' }}" href="{{ route('player.character') }}"><span class="nav-icon">♙</span>Personnage</a>
@@ -33,6 +34,7 @@
                 <a class="nav-link {{ request()->routeIs('player.world.*') ? 'active' : '' }}" href="{{ route('player.world.index') }}"><span class="nav-icon">⌖</span>Cartes & zones</a>
                 <a class="nav-link {{ request()->routeIs('player.notes.*', 'player.npcs.*') ? 'active' : '' }}" href="{{ route('player.notes.index') }}"><span class="nav-icon">≡</span>Journal & rencontres</a>
                 <a class="nav-link {{ request()->routeIs('player.glossary.*') ? 'active' : '' }}" href="{{ route('player.glossary.index') }}"><span class="nav-icon">☗</span>Glossaire</a>
+                <a class="nav-link {{ request()->routeIs('player.bestiary.*') ? 'active' : '' }}" href="{{ route('player.bestiary.index') }}"><span class="nav-icon">♜</span>Bestiaire</a>
             @endif
             <a class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}" href="{{ route('chat.index') }}">
                 <span class="nav-icon">✉</span>Chat

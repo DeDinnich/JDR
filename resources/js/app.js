@@ -192,7 +192,8 @@ if (window.Echo && userRole === 'player') {
         .listen('.secret-message.sent', enqueueMessage)
         .listen('.secret-message.deleted', (event) => removeSecretMessage(event.id))
         .listen('.character-sheet.revealed', showReveal)
-        .listen('.npc.revealed', showReveal);
+        .listen('.npc.revealed', showReveal)
+        .listen('.monster.revealed', showReveal);
 }
 
 if (window.Echo && userRole === 'game_master') {
@@ -891,3 +892,61 @@ if (houseChoice && window.Echo) {
         houseChoice.querySelector(`[data-house="${event.slug}"]`)?.classList.add('is-taken');
     });
 }
+
+/*
+ * Bestiaire : les jets restent autoritaires côté serveur. Le navigateur ne
+ * reçoit que le détail du résultat, jamais une formule évaluée localement.
+ */
+document.querySelectorAll('[data-dice-roll]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        const container = button.closest('.actions');
+        const output = container?.querySelector('[data-dice-result]');
+        const initialLabel = button.textContent;
+
+        button.disabled = true;
+        button.textContent = 'Lancer…';
+        if (output) output.textContent = '';
+
+        try {
+            const response = await fetch(button.dataset.url, {
+                method: 'POST',
+                headers: realtimeHeaders(),
+            });
+            const payload = await response.json().catch(() => null);
+
+            if (!response.ok) {
+                throw new Error(payload?.message ?? `Jet refusé (${response.status}).`);
+            }
+
+            if (output) {
+                const modifier = payload.modifier === 0
+                    ? ''
+                    : ` ${payload.modifier > 0 ? '+' : '−'} ${Math.abs(payload.modifier)}`;
+                output.textContent = `${payload.rolls.join(' + ')}${modifier} = ${payload.total}`;
+            }
+        } catch (error) {
+            if (output) output.textContent = error.message ?? 'Jet impossible.';
+        } finally {
+            button.disabled = false;
+            button.textContent = initialLabel;
+        }
+    });
+});
+
+document.querySelectorAll('[data-copy-target]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        const target = document.getElementById(button.dataset.copyTarget);
+        const status = button.closest('.card')?.querySelector('[data-copy-status]');
+
+        if (!target) return;
+
+        try {
+            await navigator.clipboard.writeText(target.value ?? target.textContent ?? '');
+            if (status) status.textContent = 'JSON copié dans le presse-papiers.';
+        } catch (error) {
+            target.focus();
+            target.select?.();
+            if (status) status.textContent = 'Copie automatique indisponible : le contenu est sélectionné.';
+        }
+    });
+});

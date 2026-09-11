@@ -8,6 +8,7 @@ use App\Models\Location;
 use App\Models\MapPoint;
 use App\Models\SecretMessage;
 use App\Models\User;
+use App\Services\Bestiary\MonsterPresenter;
 use App\Services\CharacterSheet\CharacterSheetPresenter;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +24,7 @@ class SessionExtractionService
     public function __construct(
         private readonly CharacterSheetPresenter $characterSheets,
         private readonly NpcPresenter $npcs,
+        private readonly MonsterPresenter $monsters,
     ) {}
 
     /** @param array<int, int|string> $userIds */
@@ -75,6 +77,7 @@ class SessionExtractionService
                 ])
                 ->all(),
             'glossary' => $this->npcs->glossaryFor($player),
+            'bestiary' => $this->monsters->bestiaryFor($player),
             'world' => ['maps' => $this->knownMaps($player)],
             'received_secret_messages' => $player->receivedMessages()
                 ->oldest()

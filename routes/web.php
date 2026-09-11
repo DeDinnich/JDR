@@ -11,6 +11,8 @@ use App\Http\Controllers\Gm\CharacterController as GmCharacterController;
 use App\Http\Controllers\Gm\CharacterPortraitController as GmCharacterPortraitController;
 use App\Http\Controllers\Gm\DashboardController as GmDashboardController;
 use App\Http\Controllers\Gm\MapGridController;
+use App\Http\Controllers\Gm\MonsterController as GmMonsterController;
+use App\Http\Controllers\Gm\MonsterImportController;
 use App\Http\Controllers\Gm\NpcController as GmNpcController;
 use App\Http\Controllers\Gm\NpcImportController;
 use App\Http\Controllers\Gm\NpcPortraitController;
@@ -22,6 +24,7 @@ use App\Http\Controllers\MapPreviewController;
 use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\Player\AllyController;
+use App\Http\Controllers\Player\BestiaryController;
 use App\Http\Controllers\Player\CharacterController as PlayerCharacterController;
 use App\Http\Controllers\Player\CharacterCreationController;
 use App\Http\Controllers\Player\CharacterSkillController as PlayerCharacterSkillController;
@@ -116,6 +119,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/glossaire', [GlossaryController::class, 'index'])->name('glossary.index');
         Route::get('/glossaire/{npc}', [GlossaryController::class, 'show'])->name('glossary.show');
         Route::put('/glossaire/{npc}/notes', [GlossaryController::class, 'updateNotes'])->name('glossary.notes');
+
+        Route::get('/bestiaire', [BestiaryController::class, 'index'])->name('bestiary.index');
+        Route::get('/bestiaire/{monster}', [BestiaryController::class, 'show'])->name('bestiary.show');
+        Route::put('/bestiaire/{monster}', [BestiaryController::class, 'update'])->name('bestiary.update');
     });
 
     Route::prefix('maitre-du-jeu')->name('gm.')->middleware('role:game_master')->group(function () {
@@ -188,6 +195,27 @@ Route::middleware('auth')->group(function () {
             Route::post('/informations/{information}/reveler', [GmNpcController::class, 'revealInformation'])->name('npcs.informations.reveal');
 
             Route::post('/reveler', [GmNpcController::class, 'reveal'])->name('npcs.detail.reveal');
+        });
+
+        Route::get('/bestiaire', [GmMonsterController::class, 'index'])->name('bestiary.index');
+        Route::post('/bestiaire', [GmMonsterController::class, 'store'])->name('bestiary.store');
+        Route::get('/bestiaire/importer', [MonsterImportController::class, 'show'])->name('bestiary.import.show');
+        Route::post('/bestiaire/importer/analyser', [MonsterImportController::class, 'analyse'])->name('bestiary.import.analyse');
+        Route::post('/bestiaire/importer', [MonsterImportController::class, 'store'])->name('bestiary.import.store');
+        Route::get('/bestiaire/exporter', [GmMonsterController::class, 'export'])->name('bestiary.export');
+
+        Route::prefix('/bestiaire/{monster}')->group(function () {
+            Route::get('/', [GmMonsterController::class, 'show'])->name('bestiary.show');
+            Route::put('/', [GmMonsterController::class, 'update'])->name('bestiary.update');
+            Route::delete('/', [GmMonsterController::class, 'destroy'])->name('bestiary.destroy');
+            Route::delete('/portrait', [GmMonsterController::class, 'destroyPortrait'])->name('bestiary.portrait.destroy');
+            Route::post('/reveler', [GmMonsterController::class, 'reveal'])->name('bestiary.reveal');
+            Route::post('/jet-degats', [GmMonsterController::class, 'rollDamage'])->name('bestiary.damage.roll');
+            Route::get('/exporter', [GmMonsterController::class, 'export'])->name('bestiary.export.one');
+            Route::post('/capacites', [GmMonsterController::class, 'storeAbility'])->name('bestiary.abilities.store');
+            Route::put('/capacites/{ability}', [GmMonsterController::class, 'updateAbility'])->name('bestiary.abilities.update');
+            Route::delete('/capacites/{ability}', [GmMonsterController::class, 'destroyAbility'])->name('bestiary.abilities.destroy');
+            Route::post('/capacites/{ability}/lancer', [GmMonsterController::class, 'rollAbility'])->name('bestiary.abilities.roll');
         });
 
         Route::get('/monde', [GmWorldController::class, 'index'])->name('world.index');
